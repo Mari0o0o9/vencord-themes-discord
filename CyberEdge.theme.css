@@ -767,10 +767,6 @@ nav[class*="guilds"],
   background-color: transparent !important;
 }
 
-[class*="guilds"] [class*="listItem"] [class*="childWrapper"] {
-  background: transparent !important;
-}
-
 /* serwer aktywny */
 [class*="guilds"] [class*="listItem"]:has([class*="selected"]) [class*="wrapper"],
 [class*="guilds"] [class*="listItem"]:has([class*="selected"]) [class*="childWrapper"],
