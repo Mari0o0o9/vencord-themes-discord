@@ -547,10 +547,16 @@ a {
 }
 
 /* kontenery z absolutnie pozycjonowanymi pseudo-elementami (linie, siatki, klamry) */
+/* FIX: usunięto [class*="panels"] z tej listy. Discord (visual refresh) ustawia
+   natywnie section.panels_* { position: absolute; bottom/inset-inline-start:
+   var(--custom-panels-spacing) } wewnątrz .sidebar_*, który jest SUBGRIDEM bez
+   obszaru dla panelu. position: relative wrzucało panel do przepływu siatki →
+   auto-placement umieszczał go w wierszu „notice" NAD listą kanałów (i spychał
+   czat w dół). Absolutne pozycjonowanie z natywnego CSS też tworzy kontekst dla
+   ::before z sekcji 18, więc nic więcej nie trzeba. */
 [class*="chatContent"],
 [class*="messagesWrapper"],
 [class*="upperContainer"],
-[class*="panels"],
 [class*="membersWrap"],
 [class*="titleBar"],
 [class*="typeWindows"],
@@ -705,86 +711,108 @@ nav[class*="guilds"],
   scrollbar-width: none;
 }
 
-[class*="guilds"] [class*="listItem"],
-[class*="guilds"] [data-list-item-id^="guildsnav___"] {
+/* FIX: usunięto [data-list-item-id^="guildsnav___"] z tej i kolejnych reguł.
+   W obecnym DOM Discorda ten atrybut ma <div class="wrapper_*"> leżący WEWNĄTRZ
+   <svg><foreignObject>, więc margin/position/filter lądowały w środku maski
+   SVG (przesuwały i przycinały ikonę). Zostaje sam wiersz listy (listItem_*). */
+[class*="guilds"] [class*="listItem"] {
   position: relative;
   margin-bottom: 2px;
 }
 
-/* ścięty kwadrat ikony
-   (background-color zamiast skrótu background, żeby nie nadpisać tła ikony) */
-[class*="guilds"] [class*="listItem"] [class*="wrapper"],
-[class*="guilds"] [data-list-item-id^="guildsnav___"] [class*="wrapper"] {
+/* FIX: ścięty kwadrat przeniesiony na kafelek BlobMask (blobContainer_* > wrapper_*),
+   który leży POZA <svg>. Stary selektor [class*="listItem"] [class*="wrapper"]
+   łapał naraz trzy różne elementy:
+     1) wrapper_* pigułki (wskaźnik nieprzeczytanych) — dostawał tło + ramkę,
+     2) wrapper_* kafelka BlobMask — OK,
+     3) wrapper_* wewnątrz <foreignObject> (rodzic <img>) — dostawał border 1px
+        (content-box → 42×42 w polu 40×40), clip-path i tło.
+   HTML w <foreignObject> z clip-path/border to znane źródło błędów renderowania
+   w Chromium (ikona przesunięta, obcięta lub w ogóle nie malowana).
+   Ramka rysowana jest teraz przez ::after nad <svg>, bo border na kafelku
+   przesuwałby absolutnie pozycjonowany <svg> o 1px. */
+[class*="guilds"] [class*="blobContainer"] > [class*="wrapper_"] {
   clip-path: var(--cp-shape-sm) !important;
   background-color: var(--cp-bg-card);
-  border: 1px solid var(--cp-neon-line);
   box-shadow: inset 0 0 14px -6px var(--cp-neon-soft);
-  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+  transition: background-color 0.16s ease, box-shadow 0.16s ease;
 }
 
-[class*="guilds"] [class*="listItem"] [class*="wrapper"]:hover,
-[class*="guilds"] [data-list-item-id^="guildsnav___"] [class*="wrapper"]:hover {
+[class*="guilds"] [class*="blobContainer"] > [class*="wrapper_"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1; /* nad <svg>, pod lowerBadge (natywnie z-index: 2) */
+  border: 1px solid var(--cp-neon-line);
+  pointer-events: none;
+  transition: border-color 0.16s ease;
+}
+
+[class*="guilds"] [class*="blobContainer"] > [class*="wrapper_"]:hover {
   background-color: var(--cp-bg-hover);
+}
+
+[class*="guilds"] [class*="blobContainer"] > [class*="wrapper_"]:hover::after {
   border-color: var(--cp-neon);
 }
 
-/* poświata rysowana na <li>, bo clip-path ikony ścina jej własny box-shadow */
-[class*="guilds"] [class*="listItem"]:hover,
-[class*="guilds"] [data-list-item-id^="guildsnav___"]:hover {
+/* poświata rysowana na wierszu listy, bo clip-path kafelka ścina jego własny box-shadow */
+[class*="guilds"] [class*="listItem"]:hover {
   filter: drop-shadow(0 0 7px var(--cp-neon-glow));
 }
 
-/* ikona serwera — zdejmujemy okrągłą maskę SVG i wymuszamy widoczny kwadrat
-   (Discord od 2023 renderuje ikony przez svg → foreignObject → <img>; bez
-   overflow:visible i jawnego rozmiaru ikona potrafi być obcięta/niewidoczna) */
-[class*="guilds"] [class*="listItem"] img,
-[class*="guilds"] [class*="listItem"] foreignObject,
-[class*="guilds"] [class*="listItem"] [class*="childWrapper"],
-[class*="guilds"] [class*="listItem"] svg,
-[class*="guilds"] [class*="listItem"] [class*="acronym"],
-[class*="guilds"] [class*="listItem"] [class*="icon"],
-[class*="guilds"] [class*="listItem"] *[mask],
-[class*="guilds"] [class*="listItem"] mask {
+/* FIX: maskę zdejmujemy TYLKO z <foreignObject> (to on ma mask="url(#…)" z kształtem
+   squircle/koła). Stara lista (img, svg, [class*="icon"], [class*="acronym"], *[mask],
+   <mask>) była nadmiarowa — pozostałe elementy nie mają masek, a *[mask] łapał też
+   ścieżki podświetlenia/fokusu w <svg>. Kształt ścięcia daje clip-path kafelka wyżej. */
+[class*="guilds"] [class*="blobContainer"] foreignObject {
   mask: none !important;
   -webkit-mask: none !important;
 }
 
-[class*="guilds"] [class*="listItem"] foreignObject {
-  overflow: visible !important;
-  x: 0;
-  y: 0;
-}
-
-/* właściwa ikona / akronim — zawsze widoczna i wypełnia kafelek */
-[class*="guilds"] [class*="listItem"] img,
-[class*="guilds"] [class*="listItem"] [class*="acronym"],
+/* FIX: USUNIĘTO wymuszanie wewnątrz <foreignObject>:
+     foreignObject { overflow: visible !important; x: 0; y: 0 }
+     img / [class*="acronym"] / [class*="childWrapper"] {
+       display: block !important; width: 100% !important; height: 100% !important;
+       object-fit: cover !important; … }
+   Discord sam ustawia .icon_* { display:block; width/height: var(--guildbar-avatar-size);
+   object-fit: cover }, a .childWrapper_* jest flexem centrującym akronim.
+   display:block psuł centrowanie akronimu / ikony „Wiadomości prywatne",
+   a 100% liczone od wrappera z dodanym borderem rozjeżdżało ikonę.
+   Zostaje tylko przezroczyste tło childWrapper, żeby spod spodu było widać
+   kafelek motywu (natywnie Discord wstawia tam blurple przy hover/selected). */
 [class*="guilds"] [class*="listItem"] [class*="childWrapper"] {
-  display: block !important;
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-  border-radius: 0 !important;
   background-color: transparent !important;
 }
 
-/* serwer aktywny */
-[class*="guilds"] [class*="listItem"]:has([class*="selected"]) [class*="wrapper"],
-[class*="guilds"] [class*="listItem"]:has([class*="selected"]) [class*="childWrapper"],
-[class*="guilds"] [class*="wrapper"][class*="selected"] {
+/* FIX: serwer aktywny — ten sam kafelek BlobMask; blobContainer_* dostaje natywnie
+   klasę selected_* (stary :has([class*="selected"]) [class*="wrapper"] kolorował
+   też pigułkę i wrapper w <foreignObject>). */
+[class*="guilds"] [class*="blobContainer"][class*="selected"] > [class*="wrapper_"] {
   background-color: color-mix(in srgb, var(--cp-neon) 8%, var(--cp-bg-card));
-  border-color: var(--cp-neon);
   box-shadow: inset 0 0 20px -6px var(--cp-neon-soft);
 }
 
-/* neonowa listwa z lewej (jak active line w bibliotece Spicetify) */
+[class*="guilds"] [class*="blobContainer"][class*="selected"] > [class*="wrapper_"]::after {
+  border-color: var(--cp-neon);
+}
+
+/* neonowa listwa z lewej (jak active line w bibliotece Spicetify)
+   Starsze wersje Discorda: .pill_* > .wrapper_* > .item_*
+   Obecna wersja:            .listItem_* > .wrapper_*.overlay_* > span.item_* */
 [class*="guilds"] [class*="pill"] {
   clip-path: var(--cp-shape-xs) !important;
   overflow: visible;
 }
 
+/* FIX: usunięto width: 3px !important. Natywny wskaźnik ma width: 8px
+   i margin-inline-start: -4px w kontenerze 8px z overflow: hidden — widać jego
+   prawe 4px. Przy 3px szerokości cały pasek chował się poza lewą krawędzią,
+   więc znikały wskaźniki nieprzeczytanych/hover/aktywnego serwera.
+   Dodano selektor dla obecnego DOM (overlay_*), bo w nim nie ma już klasy „pill". */
 [class*="guilds"] [class*="pill"] > *,
-[class*="guilds"] [class*="pill"] span {
-  width: 3px !important;
+[class*="guilds"] [class*="pill"] span,
+[class*="guilds"] [class*="listItem"] > [class*="overlay_"] > [class*="item_"] {
   background: var(--cp-gradient-v) !important;
   box-shadow: 0 0 10px var(--cp-neon-glow);
   border-radius: 0 !important;
@@ -803,8 +831,15 @@ nav[class*="guilds"],
   box-shadow: 0 0 8px var(--cp-neon-soft);
 }
 
-[class*="guilds"] [class*="folder"],
-[class*="guilds"] [class*="folderIconWrapper"] {
+/* FIX: zawężono [class*="guilds"] [class*="folder"] do kafelków folderu.
+   Szeroki selektor łapał też folderGroup_* i folderGuildsList_* (cały rozwinięty
+   folder razem z ikonami serwerów w środku — przycinany clip-pathem),
+   folderButtonContent_* (animowany transform) oraz folderPreviewGuildIcon_*
+   (miniatury 4 ikon w zamkniętym folderze — 15px z cięciem 6.6px i nieprzezroczystym
+   tłem !important, przez co miniatury były pocięte/zamazane). */
+[class*="guilds"] [class*="folderIconWrapper"],
+[class*="guilds"] [class*="folderPreviewWrapper"],
+[class*="guilds"] [class*="folderGroupBackground"] {
   clip-path: var(--cp-shape-sm) !important;
   background-color: var(--cp-bg-card) !important;
   border: 1px solid var(--cp-neon-line);
@@ -1584,8 +1619,15 @@ svg[class*="status"][mask] {
    18. PANEL UŻYTKOWNIKA (dół listy kanałów)
    Gradientowa linia cyjan→czerwień na górnej krawędzi + ścięty awatar.
    ============================================================================= */
+/* FIX: usunięto position: relative — nadpisywało natywne position: absolute
+   panelu i wyrzucało go z dołu kolumny (patrz komentarz w sekcji 8).
+   Szerokość/wysokość/odstęp od dołu liczy teraz sam Discord
+   (width: calc(100% - var(--custom-panels-spacing)*2), bottom: var(--custom-panels-spacing)),
+   a JS Discorda mierzy wysokość panelu do --custom-app-panels-height, z której
+   korzystają lista serwerów i lista kanałów jako zapas miejsca na dole.
+   Selektor [class*="panels"] łapie też panele zakładek (panels_* w ustawieniach) —
+   zostawiony bez zmian, bo tak działał dotąd, a tam position jest natywnie relative. */
 [class*="panels"] {
-  position: relative;
   background: var(--cp-bg-3) !important;
   border-top: 1px solid transparent;
 }
