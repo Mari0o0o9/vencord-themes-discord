@@ -1,0 +1,2318 @@
+/**
+ * @name CyberEdge
+ * @author Mari0o0o9
+ * @version 1.0.0
+ * @description Cyberpunk 2077 / Night City dla Discorda — wizualny odpowiednik motywu Spicetify „CyberEdge”: głęboka czerń #04060A, neon cyjan #00F0FF, alert czerwień #FF2A4B, ścięte narożniki 45°, scanlines CRT, winieta, siatka techniczna, glitch RGB non-stop i HUD-owe panele. Warianty: NightCity / CombatZone / Arasaka.
+ * @source https://github.com/Mari0o0o9/Vencord-themes
+ * @website https://github.com/Mari0o0o9/Vencord-themes
+ */
+
+/* =============================================================================
+   CyberEdge — motyw dla Vencorda (Discord)
+   -----------------------------------------------------------------------------
+   SPIS TREŚCI
+    1. SCHEMATY KOLORÓW (NightCity / CombatZone / Arasaka) + przełącznik
+    2. TOKENY WYPROWADZANE (poświaty, linie, gradienty, siatka)
+    3. GEOMETRIA — ścięte narożniki 45° (--cp-cut) + kształty clip-path
+    4. EFEKTY CRT — scanlines / winieta / grid / glow / glitch (zmienne)
+    5. TYPOGRAFIA
+    6. MAPOWANIE NA ZMIENNE DISCORDA (blurple → neon)
+    7. BAZA + RESET ZAOKRĄGLEŃ
+    8. CRT: SCANLINES + WINIETA (overlay na całym oknie)
+    9. GRID TECHNICZNY + TŁO CZATU
+   10. GLITCH: KEYFRAMES
+   11. PASEK SERWERÓW → HUD
+   12. LISTA KANAŁÓW → PANELE HUD
+   13. NAGŁÓWEK CZATU (// prefiks + glitch)
+   14. WYSZUKIWARKA (ścięty prostokąt + flow gradientu)
+   15. WIADOMOŚCI (neonowa linia przy hover)
+   16. POLE WIADOMOŚCI
+   17. LISTA CZŁONKÓW (karta HUD z klamrami + romb statusu)
+   18. PANEL UŻYTKOWNIKA (gradient cyjan→czerwień)
+   19. SLIDERY (tor LED + rombowy uchwyt, drag = czerwień)
+   20. PRZEŁĄCZNIKI (toggle switches)
+   21. PRZYCISKI / INPUTY / SELECTY / CHECKBOXY
+   22. MENU / MODALE / TOOLTIPY / POPOUTY
+   23. USTAWIENIA
+   24. SCROLLBARY / ODZNAKI / DROBNE
+   25. prefers-reduced-motion (wyłączenie animacji)
+
+   MAPA HAKÓW (jeśli Discord przemianuje klasy w przyszłej wersji):
+    • każde miejsce w motywie łapie 2–3 warianty selektora naraz — hashowane
+      klasy ([class*="sidebar_"]), stabilne atrybuty danych ([data-list-id],
+      [data-list-item-id], id^="chat-messages-", id^="message-content-")
+      oraz role ARIA ([role="switch"], [role="slider"], [role="group"]…).
+    • żeby dodać własny hak: dopisz selektor do istniejącej reguły — style
+      opierają się na zmiennych --cp-*, więc niczego nie trzeba powtarzać.
+   ============================================================================= */
+
+@import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap");
+
+/* =============================================================================
+   1. SCHEMATY KOLORÓW
+   -----------------------------------------------------------------------------
+   Trzy kompletne schematy. Aktywny wybierasz w bloku „PRZEŁĄCZNIK" poniżej.
+   Reszta motywu nie zna konkretnych kolorów — liczy wszystko z --cp-neon
+   i --cp-neon-2 (color-mix), więc podmiana palety = 3 linie.
+   ============================================================================= */
+:root {
+  /* ---- NightCity (DOMYŚLNY, spec 1:1) ---------------------------------- */
+  --nc-neon:    #00F0FF;   /* neon główny / akcent (zamiast blurple)  */
+  --nc-neon-2:  #FF2A4B;   /* akcent wtórny / alert / drag state      */
+  --nc-alert:   #FF2A4B;
+  --nc-on-neon: #04060A;   /* tekst na neonowym wypełnieniu           */
+
+  /* ---- CombatZone (odwrócony: czerwień główna, cyjan wtórny) ----------- */
+  --cz-neon:    #FF2A4B;
+  --cz-neon-2:  #00F0FF;
+  --cz-alert:   #00F0FF;
+  --cz-on-neon: #0B0305;
+
+  /* ---- Arasaka (żółć #FCEE0A + czerwień #FF003C) ----------------------- */
+  --ar-neon:    #FCEE0A;
+  --ar-neon-2:  #FF003C;
+  --ar-alert:   #FF003C;
+  --ar-on-neon: #12100A;
+
+  /* ==========================================================================
+     ##  PRZEŁĄCZNIK SCHEMATU  ##
+     NightCity  → var(--nc-*)   [aktywny]
+     CombatZone → var(--cz-*)
+     Arasaka    → var(--ar-*)
+     Podmień poniższe 4 linie (QuickCSS: nadpisz je z !important).
+     ========================================================================== */
+  --cp-neon:    var(--nc-neon);
+  --cp-neon-2:  var(--nc-neon-2);
+  --cp-alert:   var(--nc-alert);
+  --cp-on-neon: var(--nc-on-neon);
+
+  /* ---- Tła (NightCity: głęboka czerń #04060A) --------------------------- */
+  --cp-bg:       #04060A;   /* główne tło (czat)                        */
+  --cp-bg-2:     #060A10;   /* panele boczne (kanały, member list)      */
+  --cp-bg-3:     #080D14;   /* pasek serwerów, dolny panel              */
+  --cp-bg-card:  #0A1119;   /* karty, inputy, hover                     */
+  --cp-bg-hover: #0E1A24;   /* karta po najechaniu                      */
+  --cp-bg-elev:  #08101A;   /* menu, modale, popouty                    */
+  --cp-bg-input: #070D14;   /* tło pól tekstowych                       */
+
+  /* ---- Tekst ----------------------------------------------------------- */
+  --cp-text:       #E8FDFF;                    /* biały z cyjanowym odcieniem */
+  --cp-text-muted: rgba(198, 226, 236, 0.66);  /* szary + cyjan, 58–72% op.   */
+  --cp-text-dim:   rgba(198, 226, 236, 0.58);
+  --cp-text-faint: rgba(186, 216, 230, 0.42);
+}
+
+/* =============================================================================
+   2. TOKENY WYPROWADZANE
+   Wszystko poniżej liczy się z --cp-neon / --cp-neon-2.
+   (pierwsza wartość = fallback dla przeglądarek bez color-mix, druga = właściwa)
+   ============================================================================= */
+:root {
+  /* --- Poświata neonu (siła = --cp-glow) --- */
+  --cp-neon-glow:   rgba(0, 240, 255, 0.45);
+  --cp-neon-soft:   rgba(0, 240, 255, 0.22);
+  --cp-neon-faint:  rgba(0, 240, 255, 0.10);
+  --cp-neon-line:   rgba(0, 240, 255, 0.18);
+  --cp-neon-line-2: rgba(0, 240, 255, 0.35);
+  --cp-grid-line:   rgba(0, 240, 255, 0.045);
+  --cp-alert-glow:  rgba(255, 42, 75, 0.45);
+
+  --cp-neon-glow:   color-mix(in srgb, var(--cp-neon) var(--cp-glow), transparent);
+  --cp-neon-soft:   color-mix(in srgb, var(--cp-neon) 22%, transparent);
+  --cp-neon-faint:  color-mix(in srgb, var(--cp-neon) 10%, transparent);
+  --cp-neon-line:   color-mix(in srgb, var(--cp-neon) 18%, transparent);
+  --cp-neon-line-2: color-mix(in srgb, var(--cp-neon) 35%, transparent);
+  --cp-grid-line:   color-mix(in srgb, var(--cp-neon) var(--cp-grid), transparent);
+  --cp-alert-glow:  color-mix(in srgb, var(--cp-alert) var(--cp-glow), transparent);
+
+  /* --- Gradient przewodni: cyjan → czerwień --- */
+  --cp-gradient:      linear-gradient(90deg, var(--cp-neon), var(--cp-neon-2));
+  --cp-gradient-v:    linear-gradient(180deg, var(--cp-neon), var(--cp-neon-2));
+  --cp-gradient-diag: linear-gradient(135deg, var(--cp-neon), var(--cp-neon-2));
+  --cp-gradient-soft: linear-gradient(90deg,
+                        color-mix(in srgb, var(--cp-neon) 22%, transparent),
+                        color-mix(in srgb, var(--cp-neon-2) 22%, transparent));
+
+  /* --- Rozmycia i cienie --- */
+  --cp-shadow: 0 10px 34px -12px rgba(0, 0, 0, 0.85);
+  --cp-inset-glow: inset 0 0 18px -6px var(--cp-neon-soft);
+}
+
+/* =============================================================================
+   3. GEOMETRIA — ścięte narożniki 45°
+   -----------------------------------------------------------------------------
+   --cp-cut: 12px  → ścięty prawy-górny i lewy-dolny róg (45°)
+   --cp-cut: 0     → proste kąty (efekt całkowicie wyłączony)
+   Wszystkie kształty są pochodnymi tej jednej zmiennej.
+   ============================================================================= */
+:root {
+  --cp-cut: 12px;
+
+  /* mniejsze/większe warianty cięcia */
+  --cp-cut-sm: calc(var(--cp-cut) * 0.55);
+  --cp-cut-xs: calc(var(--cp-cut) * 0.35);
+  --cp-cut-lg: calc(var(--cp-cut) * 1.5);
+
+  /* bazowy kształt: ścięte top-right + bottom-left */
+  --cp-shape: polygon(
+    0 0,
+    calc(100% - var(--cp-cut)) 0,
+    100% var(--cp-cut),
+    100% 100%,
+    var(--cp-cut) 100%,
+    0 calc(100% - var(--cp-cut))
+  );
+  --cp-shape-sm: polygon(
+    0 0,
+    calc(100% - var(--cp-cut-sm)) 0,
+    100% var(--cp-cut-sm),
+    100% 100%,
+    var(--cp-cut-sm) 100%,
+    0 calc(100% - var(--cp-cut-sm))
+  );
+  --cp-shape-xs: polygon(
+    0 0,
+    calc(100% - var(--cp-cut-xs)) 0,
+    100% var(--cp-cut-xs),
+    100% 100%,
+    var(--cp-cut-xs) 100%,
+    0 calc(100% - var(--cp-cut-xs))
+  );
+  --cp-shape-lg: polygon(
+    0 0,
+    calc(100% - var(--cp-cut-lg)) 0,
+    100% var(--cp-cut-lg),
+    100% 100%,
+    var(--cp-cut-lg) 100%,
+    0 calc(100% - var(--cp-cut-lg))
+  );
+
+  /* warianty pomocnicze (do własnych nadpisań w QuickCSS — motyw ich nie wymusza) */
+  --cp-shape-tr: polygon(0 0, calc(100% - var(--cp-cut)) 0, 100% var(--cp-cut), 100% 100%, 0 100%);
+  --cp-shape-bl: polygon(0 0, 100% 0, 100% 100%, var(--cp-cut) 100%, 0 calc(100% - var(--cp-cut)));
+  --cp-shape-diamond: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  --cp-shape-tag: polygon(0 0, 100% 0, 100% 100%, calc(var(--cp-cut-sm)) 100%, 0 calc(100% - var(--cp-cut-sm)));
+}
+
+/* =============================================================================
+   4. EFEKTY CRT — zmienne
+   ============================================================================= */
+:root {
+  --cp-scanlines: 0.13;    /* siła linii kineskopu (0 = wyłączone)          */
+  --cp-scanline-size: 3px; /* rozstaw linii                                 */
+  --cp-vignette: 0.20;     /* przyciemnienie rogów ekranu (0 = wyłączone)   */
+  --cp-grid: 4.5%;         /* krycie siatki technicznej na tle czatu        */
+  --cp-grid-size: 34px;    /* rozmiar oczka siatki                          */
+  --cp-glow: 45%;          /* siła neonowej poświaty                        */
+  --cp-glitch-speed: 3.4s; /* spokojny, stały cykl glitcha                  */
+  --cp-glitch-hover-speed: 0.55s; /* przyspieszone szarpnięcia na hover    */
+  --cp-flicker: 6s;        /* migotanie kineskopu                           */
+}
+
+/* =============================================================================
+   5. TYPOGRAFIA
+   Rajdhani = interfejs HUD, Share Tech Mono = terminal (//, kategorie, kody)
+   ============================================================================= */
+:root {
+  --cp-font-ui: "Rajdhani", "Chakra Petch", "Inter", "gg sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --cp-font-mono: "Share Tech Mono", "JetBrains Mono", "Fira Code", Consolas, "Courier New", monospace;
+}
+
+/* =============================================================================
+   6. MAPOWANIE NA ZMIENNE DISCORDA
+   Blurple → neon, tła → NightCity, promienie → 0 (geometrię robi clip-path).
+   Motyw wymusza ciemny schemat także przy włączonym motywie jasnym.
+   ============================================================================= */
+:root,
+.theme-dark,
+.theme-darker,
+.theme-midnight,
+.theme-light,
+.visual-refresh,
+#app-mount {
+  color-scheme: dark;
+
+  /* ---- Tła (klasyczny zestaw) ---- */
+  --background-primary: var(--cp-bg);
+  --background-primary-alt: var(--cp-bg);
+  --background-secondary: var(--cp-bg-2);
+  --background-secondary-alt: var(--cp-bg-3);
+  --background-tertiary: var(--cp-bg-3);
+  --background-floating: var(--cp-bg-elev);
+  --background-mobile-primary: var(--cp-bg);
+  --background-mobile-secondary: var(--cp-bg-2);
+  --background-nested-floating: var(--cp-bg-elev);
+  --background-accent: var(--cp-neon-faint);
+  --activity-card-background: var(--cp-bg-card);
+  --channeltextarea-background: var(--cp-bg-input);
+  --input-background: var(--cp-bg-input);
+  --home-background: var(--cp-bg);
+  --chat-background: var(--cp-bg);
+  --chat-border: var(--cp-neon-line);
+  --chat-input-container-background: var(--cp-bg);
+  --deprecated-card-bg: var(--cp-bg-card);
+  --deprecated-card-editable-bg: var(--cp-bg-card);
+  --deprecated-store-bg: var(--cp-bg);
+  --deprecated-quickswitcher-input-background: var(--cp-bg-input);
+
+  /* ---- Nowy zestaw (visual refresh 2024/2025+) ---- */
+  --background-base-lowest: var(--cp-bg-3);
+  --background-base-lower: var(--cp-bg-2);
+  --background-base-low: var(--cp-bg);
+  --background-base-medium: var(--cp-bg-card);
+  --background-base-high: var(--cp-bg-hover);
+  --background-base-higher: var(--cp-bg-elev);
+  --background-base-highest: var(--cp-bg-elev);
+  --bg-base-primary: var(--cp-bg);
+  --bg-base-secondary: var(--cp-bg-2);
+  --bg-base-tertiary: var(--cp-bg-3);
+  --bg-surface-raised: var(--cp-bg-card);
+  --bg-surface-overlay: var(--cp-bg-elev);
+  --bg-surface-interactive-hover: var(--cp-bg-hover);
+  --bg-surface-interactive-active: var(--cp-bg-hover);
+  --bg-surface-interactive-selected: var(--cp-neon-faint);
+  --bg-mod-faint: rgba(255, 255, 255, 0.02);
+  --bg-mod-subtle: var(--cp-neon-faint);
+  --bg-mod-normal: color-mix(in srgb, var(--cp-neon) 10%, transparent);
+  --bg-mod-strong: color-mix(in srgb, var(--cp-neon) 16%, transparent);
+
+  /* ---- Modyfikatory tła (hover / zaznaczenie / linie) ---- */
+  --background-modifier-hover: rgba(255, 255, 255, 0.035);
+  --background-modifier-active: var(--cp-neon-faint);
+  --background-modifier-selected: var(--cp-neon-soft);
+  --background-modifier-accent: var(--cp-neon-line);
+  --background-modifier-border: var(--cp-neon-line);
+  --background-modifier-border-hover: var(--cp-neon-line-2);
+  --background-modifier-border-focus: var(--cp-neon-line-2);
+  --background-mentioned: color-mix(in srgb, var(--cp-neon) 7%, transparent);
+  --background-mentioned-hover: color-mix(in srgb, var(--cp-neon) 11%, transparent);
+  --background-message-hover: rgba(255, 255, 255, 0.028);
+  --background-message-highlight: color-mix(in srgb, var(--cp-neon) 7%, transparent);
+  --background-message-highlight-hover: color-mix(in srgb, var(--cp-neon) 11%, transparent);
+
+  /* ---- Obramowania ---- */
+  --border-faint: var(--cp-neon-faint);
+  --border-subtle: var(--cp-neon-line);
+  --border-normal: var(--cp-neon-line);
+  --border-muted: var(--cp-neon-faint);
+  --border-strong: var(--cp-neon-line-2);
+  --border-focused: var(--cp-neon);
+  --border-color: var(--cp-neon-line);
+
+  /* ---- Tekst ---- */
+  --text-normal: var(--cp-text);
+  --text-default: var(--cp-text);
+  --text-strong: var(--cp-text);
+  --text-subtle: var(--cp-text-muted);
+  --text-muted: var(--cp-text-muted);
+  --text-faint: var(--cp-text-faint);
+  --text-link: var(--cp-neon);
+  --text-link-low-saturation: var(--cp-neon-2);
+  --text-brand: var(--cp-neon);
+  --text-positive: var(--cp-neon);
+  --text-warning: #FCEE0A;
+  --text-danger: var(--cp-alert);
+  --text-feedback-positive: var(--cp-neon);
+  --text-feedback-critical: var(--cp-alert);
+  --header-primary: var(--cp-text);
+  --header-secondary: var(--cp-text-muted);
+  --interactive-normal: var(--cp-text-muted);
+  --interactive-hover: var(--cp-text);
+  --interactive-active: var(--cp-text);
+  --interactive-muted: var(--cp-text-faint);
+  --channel-icon: var(--cp-text-muted);
+  --channel-text-area-placeholder: var(--cp-text-faint);
+  --textbox-markdown-syntax: var(--cp-text-faint);
+  --mention-foreground: var(--cp-neon);
+  --mention-background: color-mix(in srgb, var(--cp-neon) 14%, transparent);
+  --focus-primary: var(--cp-neon);
+
+  /* ---- Blurple → neon (stary i nowy zestaw) ---- */
+  --brand-experiment: var(--cp-neon);
+  --brand-experiment-100: #dffcff;
+  --brand-experiment-130: #c7f8ff;
+  --brand-experiment-160: #aef5ff;
+  --brand-experiment-200: #9bf2ff;
+  --brand-experiment-230: #8aefff;
+  --brand-experiment-260: #7aecff;
+  --brand-experiment-300: var(--cp-neon);
+  --brand-experiment-330: var(--cp-neon);
+  --brand-experiment-360: var(--cp-neon);
+  --brand-experiment-400: var(--cp-neon);
+  --brand-experiment-430: var(--cp-neon);
+  --brand-experiment-460: var(--cp-neon);
+  --brand-experiment-500: var(--cp-neon);
+  --brand-experiment-530: var(--cp-neon);
+  --brand-experiment-560: var(--cp-neon);
+  --brand-experiment-600: var(--cp-neon);
+  --brand-experiment-630: var(--cp-neon);
+  --brand-experiment-660: var(--cp-neon);
+  --brand-experiment-700: var(--cp-neon-2);
+  --brand-experiment-05a: color-mix(in srgb, var(--cp-neon) 5%, transparent);
+  --brand-experiment-10a: var(--cp-neon-faint);
+  --brand-experiment-15a: color-mix(in srgb, var(--cp-neon) 15%, transparent);
+  --brand-experiment-20a: var(--cp-neon-soft);
+  --brand-experiment-25a: color-mix(in srgb, var(--cp-neon) 25%, transparent);
+  --brand-experiment-30a: color-mix(in srgb, var(--cp-neon) 30%, transparent);
+  --brand-experiment-35a: color-mix(in srgb, var(--cp-neon) 35%, transparent);
+  --brand-experiment-40a: var(--cp-neon-glow);
+  --brand-100: #dffcff;
+  --brand-130: #c7f8ff;
+  --brand-160: #aef5ff;
+  --brand-200: #9bf2ff;
+  --brand-230: #8aefff;
+  --brand-260: #7aecff;
+  --brand-300: var(--cp-neon);
+  --brand-330: var(--cp-neon);
+  --brand-360: var(--cp-neon);
+  --brand-400: var(--cp-neon);
+  --brand-430: var(--cp-neon);
+  --brand-460: var(--cp-neon);
+  --brand-500: var(--cp-neon);
+  --brand-530: var(--cp-neon);
+  --brand-560: var(--cp-neon);
+  --brand-600: var(--cp-neon);
+  --brand-630: var(--cp-neon);
+  --brand-660: var(--cp-neon);
+  --brand-05a: color-mix(in srgb, var(--cp-neon) 5%, transparent);
+  --brand-10a: var(--cp-neon-faint);
+  --brand-15a: color-mix(in srgb, var(--cp-neon) 15%, transparent);
+  --brand-20a: var(--cp-neon-soft);
+  --brand-25a: color-mix(in srgb, var(--cp-neon) 25%, transparent);
+  --brand-30a: color-mix(in srgb, var(--cp-neon) 30%, transparent);
+  --brand-35a: color-mix(in srgb, var(--cp-neon) 35%, transparent);
+  --brand-40a: var(--cp-neon-glow);
+  --brand-500-hsl: none;
+  --control-brand-foreground: var(--cp-neon);
+  --control-brand-foreground-new: var(--cp-neon);
+  --guild-boosting-pink: var(--cp-neon-2);
+
+  /* ---- Przyciski (nowy zestaw Discorda) ---- */
+  --button-filled-brand-background: var(--cp-neon);
+  --button-filled-brand-background-hover: color-mix(in srgb, var(--cp-neon) 84%, white);
+  --button-filled-brand-background-active: color-mix(in srgb, var(--cp-neon) 76%, black);
+  --button-filled-brand-foreground: var(--cp-on-neon);
+  --button-filled-brand-text: var(--cp-on-neon);
+  --button-filled-brand-border: transparent;
+  --button-outline-brand-text: var(--cp-neon);
+  --button-outline-brand-text-hover: var(--cp-neon);
+  --button-outline-brand-text-active: var(--cp-neon);
+  --button-outline-brand-background: transparent;
+  --button-outline-brand-background-hover: var(--cp-neon-faint);
+  --button-outline-brand-background-active: var(--cp-neon-soft);
+  --button-outline-brand-border: var(--cp-neon-line-2);
+  --button-outline-brand-border-hover: var(--cp-neon);
+  --button-outline-brand-border-active: var(--cp-neon);
+  --button-danger-background: var(--cp-alert);
+  --button-danger-background-hover: color-mix(in srgb, var(--cp-alert) 84%, white);
+  --button-secondary-background: var(--cp-bg-card);
+  --button-secondary-background-hover: var(--cp-bg-hover);
+  --button-secondary-text: var(--cp-text);
+
+  /* ---- Statusy: zieleń → neon (online = cyjan jak w CyberEdge) ---- */
+  --green-300: color-mix(in srgb, var(--cp-neon) 70%, white);
+  --green-360: var(--cp-neon);
+  --green-430: var(--cp-neon);
+  --status-online: var(--cp-neon);
+  --status-idle: #FCEE0A;
+  --status-dnd: var(--cp-alert);
+  --status-offline: #4A5A63;
+  --status-streaming: var(--cp-neon-2);
+  --status-speaking: var(--cp-neon);
+
+  /* ---- Czerwienie / alerty ---- */
+  --red-400: var(--cp-alert);
+  --red-430: var(--cp-alert);
+  --red-500: var(--cp-alert);
+  --red-560: var(--cp-alert);
+  --info-positive-background: color-mix(in srgb, var(--cp-neon) 18%, transparent);
+  --info-danger-background: color-mix(in srgb, var(--cp-alert) 18%, transparent);
+  --info-danger-foreground: var(--cp-alert);
+  --info-warning-foreground: #FCEE0A;
+
+  /* ---- Scrollbary ---- */
+  --scrollbar-thin-thumb: color-mix(in srgb, var(--cp-neon) 45%, transparent);
+  --scrollbar-thin-track: transparent;
+  --scrollbar-auto-thumb: color-mix(in srgb, var(--cp-neon) 32%, transparent);
+  --scrollbar-auto-track: transparent;
+  --scrollbar-auto-scrollbar-color-thumb: color-mix(in srgb, var(--cp-neon) 32%, transparent);
+  --scrollbar-auto-scrollbar-color-track: transparent;
+  --scrollbar-auto-scrollbar-bg-thumb: color-mix(in srgb, var(--cp-neon) 32%, transparent);
+  --scrollbar-auto-scrollbar-bg-track: transparent;
+
+  /* ---- Kształty: Discord nie ma już żadnego border-radius ---- */
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-xxl: 0px;
+  --radius-2xl: 0px;
+  --radius-round: 0px;
+  --radius-none: 0px;
+
+  /* ---- Fonty ---- */
+  --font-primary: var(--cp-font-ui);
+  --font-display: var(--cp-font-ui);
+  --font-headline: var(--cp-font-ui);
+  --font-code: var(--cp-font-mono);
+  --font-sans: var(--cp-font-ui);
+  --font-mono: var(--cp-font-mono);
+}
+
+/* =============================================================================
+   7. BAZA + RESET ZAOKRĄGLEŃ
+   -----------------------------------------------------------------------------
+   „Brak zaokrągleń typowych dla Discorda" → każdy promień jest zerowany,
+   a geometrię robi clip-path (sekcja 3). Kształty ustawia się per komponent
+   niżej — tutaj tylko twardy reset promieni.
+   ============================================================================= */
+body,
+#app-mount {
+  background: var(--cp-bg);
+  font-family: var(--cp-font-ui);
+}
+
+body * {
+  border-radius: 0 !important;
+}
+
+/* neonowy zaznaczony tekst */
+::selection {
+  background: var(--cp-neon-soft);
+  color: var(--cp-text);
+  text-shadow: 0 0 12px var(--cp-neon-glow);
+}
+
+::placeholder {
+  color: var(--cp-text-faint) !important;
+}
+
+/* linki w czacie — zawsze z poświatą neonu */
+a {
+  color: var(--cp-neon);
+}
+
+/* =============================================================================
+   8. CRT: SCANLINES + WINIETA
+   -----------------------------------------------------------------------------
+   Pseudo-elementy na #app-mount → linie kineskopu i przyciemnione rogi leżą
+   NAD całym interfejsem (także nad modalami, jak w kinie CRT).
+   pointer-events: none — nic nie blokują.
+   Jeśli kiedyś Discord zajmie te pseudo-elementy: podmień selektory na
+   body::before (scanlines) i body::after (winieta) — reszta bez zmian.
+   ============================================================================= */
+#app-mount::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, var(--cp-scanlines)) 0px,
+      rgba(0, 0, 0, var(--cp-scanlines)) 1px,
+      transparent 1px,
+      transparent var(--cp-scanline-size)
+    );
+  animation: cp-scanline-drift 9s linear infinite, cp-flicker var(--cp-flicker) steps(1, end) infinite;
+}
+
+#app-mount::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483001;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      120% 110% at 50% 50%,
+      transparent 38%,
+      rgba(0, 0, 0, var(--cp-vignette)) 100%
+    ),
+    linear-gradient(90deg, color-mix(in srgb, var(--cp-neon) 3%, transparent), transparent 12%),
+    linear-gradient(270deg, color-mix(in srgb, var(--cp-neon-2) 3%, transparent), transparent 12%);
+}
+
+@keyframes cp-scanline-drift {
+  from { background-position: 0 0; }
+  to   { background-position: 0 var(--cp-scanline-size); }
+}
+
+@keyframes cp-flicker {
+  0%, 96%, 100% { opacity: 1; }
+  97%           { opacity: 0.94; }
+  98%           { opacity: 0.985; }
+}
+
+/* kontenery z absolutnie pozycjonowanymi pseudo-elementami (linie, siatki, klamry) */
+[class*="chatContent"],
+[class*="messagesWrapper"],
+[class*="upperContainer"],
+[class*="panels"],
+[class*="membersWrap"],
+[class*="titleBar"],
+[class*="typeWindows"],
+[class*="searchBar"],
+[class*="searchBarComponent"],
+[class*="channelTextArea"] {
+  position: relative;
+}
+
+/* =============================================================================
+   9. GRID TECHNICZNY + TŁO CZATU
+   Subtelna siatka pod wiadomościami (--cp-grid: 4.5%).
+   ============================================================================= */
+[class*="chatContent"],
+[class*="messagesWrapper"],
+[class*="chat_"] > [class*="content"],
+[data-list-id="chat-messages"],
+[class*="chat"] [class*="scrollerInner"] {
+  background-color: var(--cp-bg);
+  background-image:
+    linear-gradient(var(--cp-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--cp-grid-line) 1px, transparent 1px);
+  background-size: var(--cp-grid-size) var(--cp-grid-size);
+  background-position: center top;
+}
+
+/* świecąca krawędź nad obszarem czatu */
+[class*="chatContent"]::before,
+[class*="messagesWrapper"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--cp-gradient);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* =============================================================================
+   10. GLITCH — non-stop rozjazd RGB
+   -----------------------------------------------------------------------------
+   cp-glitch        — spokojny, stały cykl co --cp-glitch-speed (3.4s):
+                      prawie statyczny RGB-split + krótkie, punktowe szarpnięcia.
+   cp-glitch-burst  — szybsza, mocniejsza wersja na hover (--cp-glitch-hover-speed).
+   ============================================================================= */
+@keyframes cp-glitch {
+  0%, 100% {
+    text-shadow: -0.7px 0 var(--cp-neon), 0.7px 0 var(--cp-neon-2);
+    transform: translate3d(0, 0, 0) skewX(0deg);
+  }
+  17% {
+    text-shadow: -1px 0 var(--cp-neon), 1px 0 var(--cp-neon-2);
+    transform: translate3d(-0.5px, 0, 0) skewX(-0.4deg);
+  }
+  18% {                                   /* szarpnięcie #1 */
+    text-shadow: -2.5px 0 var(--cp-neon), 2.5px 0 var(--cp-neon-2);
+    transform: translate3d(-1px, 0.5px, 0) skewX(-1.6deg);
+  }
+  19.5% {                                 /* powrót */
+    text-shadow: -0.7px 0 var(--cp-neon), 0.7px 0 var(--cp-neon-2);
+    transform: translate3d(0, 0, 0) skewX(0deg);
+  }
+  46% {
+    text-shadow: -0.9px 0 var(--cp-neon), 0.9px 0 var(--cp-neon-2);
+  }
+  54% {                                   /* szarpnięcie #2 */
+    text-shadow: 1.8px 0 var(--cp-neon-2), -1.8px 0 var(--cp-neon);
+    transform: translate3d(0.8px, -0.5px, 0) skewX(0.9deg);
+  }
+  55.5% {
+    text-shadow: -0.7px 0 var(--cp-neon), 0.7px 0 var(--cp-neon-2);
+    transform: translate3d(0, 0, 0) skewX(0deg);
+  }
+  78% {                                   /* szarpnięcie #3 — najkrótsze */
+    text-shadow: -3px 0 var(--cp-neon), 3px 0 var(--cp-neon-2);
+    transform: translate3d(-1.4px, 0, 0) skewX(-2deg);
+  }
+  79% {
+    text-shadow: -0.7px 0 var(--cp-neon), 0.7px 0 var(--cp-neon-2);
+    transform: translate3d(0, 0, 0) skewX(0deg);
+  }
+}
+
+@keyframes cp-glitch-burst {
+  0%, 100% {
+    text-shadow: -1.5px 0 var(--cp-neon), 1.5px 0 var(--cp-neon-2);
+    transform: translate3d(0, 0, 0) skewX(0deg);
+  }
+  12% {
+    text-shadow: -4px 0 var(--cp-neon), 4px 0 var(--cp-neon-2);
+    transform: translate3d(-2px, 0.5px, 0) skewX(-2.4deg);
+  }
+  26% {
+    text-shadow: 3.5px 0 var(--cp-neon-2), -3.5px 0 var(--cp-neon);
+    transform: translate3d(1.8px, -0.5px, 0) skewX(1.8deg);
+  }
+  41% {
+    text-shadow: -5px 0 var(--cp-neon), 5px 0 var(--cp-neon-2);
+    transform: translate3d(-2.4px, 0.5px, 0) skewX(-3deg);
+  }
+  58% {
+    text-shadow: 2.5px 0 var(--cp-neon-2), -2.5px 0 var(--cp-neon);
+    transform: translate3d(1.2px, 0, 0) skewX(1.2deg);
+  }
+  74% {
+    text-shadow: -3px 0 var(--cp-neon), 3px 0 var(--cp-neon-2);
+    transform: translate3d(-1px, -0.5px, 0) skewX(-1.6deg);
+  }
+  88% {
+    text-shadow: -1.5px 0 var(--cp-neon), 1.5px 0 var(--cp-neon-2);
+    transform: translate3d(0, 0, 0) skewX(0deg);
+  }
+}
+
+/* wspólny zestaw elementów z glitchem: nagłówek kanału, nazwa serwera,
+   aktywny kanał na liście */
+[class*="upperContainer"] h1,
+[class*="upperContainer"] [class*="title"],
+[class*="sidebar_"] [class*="header_"] [class*="name"],
+[class*="sidebar_"] [class*="guildName"],
+[class*="sidebar_"] [class*="modeSelected"] [class*="name"],
+[class*="sidebar_"] [class*="containerDefault"] [class*="selected"] [class*="name"],
+[class*="name_"]:is([class*="selected"]) {
+  animation: cp-glitch var(--cp-glitch-speed) linear infinite;
+  will-change: text-shadow, transform;
+}
+
+/* hover → szybszy, ostrzejszy cykl */
+[class*="upperContainer"] h1:hover,
+[class*="upperContainer"] [class*="title"]:hover,
+[class*="sidebar_"] [class*="header_"]:hover [class*="name"],
+[class*="sidebar_"] [class*="modeSelected"]:hover [class*="name"] {
+  animation: cp-glitch-burst var(--cp-glitch-hover-speed) steps(1, end) infinite;
+}
+
+/* =============================================================================
+   11. PASEK SERWERÓW → pionowy HUD
+   Ikony serwerów jako ścięte kwadraty, aktywny/hover z neonową listwą z lewej.
+   ============================================================================= */
+nav[class*="guilds"],
+[class*="guilds_"] {
+  background: var(--cp-bg-3);
+  border-right: 1px solid var(--cp-neon-line);
+  box-shadow: inset -14px 0 26px -22px var(--cp-neon-glow);
+}
+
+[class*="guilds"] [class*="scroller"],
+[data-list-id="guildsnav"] {
+  background: transparent;
+  scrollbar-width: none;
+}
+
+[class*="guilds"] [class*="listItem"],
+[class*="guilds"] [data-list-item-id^="guildsnav___"] {
+  position: relative;
+  margin-bottom: 2px;
+}
+
+/* ścięty kwadrat ikony
+   (background-color zamiast skrótu background, żeby nie nadpisać tła ikony) */
+[class*="guilds"] [class*="listItem"] [class*="wrapper"],
+[class*="guilds"] [data-list-item-id^="guildsnav___"] [class*="wrapper"] {
+  clip-path: var(--cp-shape-sm) !important;
+  background-color: var(--cp-bg-card);
+  border: 1px solid var(--cp-neon-line);
+  box-shadow: inset 0 0 14px -6px var(--cp-neon-soft);
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+[class*="guilds"] [class*="listItem"] [class*="wrapper"]:hover,
+[class*="guilds"] [data-list-item-id^="guildsnav___"] [class*="wrapper"]:hover {
+  background-color: var(--cp-bg-hover);
+  border-color: var(--cp-neon);
+}
+
+/* poświata rysowana na <li>, bo clip-path ikony ścina jej własny box-shadow */
+[class*="guilds"] [class*="listItem"]:hover,
+[class*="guilds"] [data-list-item-id^="guildsnav___"]:hover {
+  filter: drop-shadow(0 0 7px var(--cp-neon-glow));
+}
+
+/* ikona serwera — zdejmujemy okrągłą maskę SVG i wymuszamy widoczny kwadrat
+   (Discord od 2023 renderuje ikony przez svg → foreignObject → <img>; bez
+   overflow:visible i jawnego rozmiaru ikona potrafi być obcięta/niewidoczna) */
+[class*="guilds"] [class*="listItem"] img,
+[class*="guilds"] [class*="listItem"] foreignObject,
+[class*="guilds"] [class*="listItem"] [class*="childWrapper"],
+[class*="guilds"] [class*="listItem"] svg,
+[class*="guilds"] [class*="listItem"] [class*="acronym"],
+[class*="guilds"] [class*="listItem"] [class*="icon"],
+[class*="guilds"] [class*="listItem"] *[mask],
+[class*="guilds"] [class*="listItem"] mask {
+  mask: none !important;
+  -webkit-mask: none !important;
+}
+
+[class*="guilds"] [class*="listItem"] foreignObject {
+  overflow: visible !important;
+  x: 0;
+  y: 0;
+}
+
+/* właściwa ikona / akronim — zawsze widoczna i wypełnia kafelek */
+[class*="guilds"] [class*="listItem"] img,
+[class*="guilds"] [class*="listItem"] [class*="acronym"],
+[class*="guilds"] [class*="listItem"] [class*="childWrapper"] {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+}
+
+[class*="guilds"] [class*="listItem"] [class*="childWrapper"] {
+  background: transparent !important;
+}
+
+/* serwer aktywny */
+[class*="guilds"] [class*="listItem"]:has([class*="selected"]) [class*="wrapper"],
+[class*="guilds"] [class*="listItem"]:has([class*="selected"]) [class*="childWrapper"],
+[class*="guilds"] [class*="wrapper"][class*="selected"] {
+  background-color: color-mix(in srgb, var(--cp-neon) 8%, var(--cp-bg-card));
+  border-color: var(--cp-neon);
+  box-shadow: inset 0 0 20px -6px var(--cp-neon-soft);
+}
+
+/* neonowa listwa z lewej (jak active line w bibliotece Spicetify) */
+[class*="guilds"] [class*="pill"] {
+  clip-path: var(--cp-shape-xs) !important;
+  overflow: visible;
+}
+
+[class*="guilds"] [class*="pill"] > *,
+[class*="guilds"] [class*="pill"] span {
+  width: 3px !important;
+  background: var(--cp-gradient-v) !important;
+  box-shadow: 0 0 10px var(--cp-neon-glow);
+  border-radius: 0 !important;
+}
+
+/* wskaźnik przenoszony/nieprzeczytany */
+[class*="guilds"] [class*="pill"] [class*="item"] {
+  min-height: 8px;
+}
+
+/* separatory i foldery */
+[class*="guilds"] [class*="guildSeparator"],
+[class*="guilds"] [class*="separator"] {
+  height: 1px !important;
+  background: var(--cp-neon-line) !important;
+  box-shadow: 0 0 8px var(--cp-neon-soft);
+}
+
+[class*="guilds"] [class*="folder"],
+[class*="guilds"] [class*="folderIconWrapper"] {
+  clip-path: var(--cp-shape-sm) !important;
+  background-color: var(--cp-bg-card) !important;
+  border: 1px solid var(--cp-neon-line);
+}
+
+/* odznaki (nieprzeczytane / wzmianki) — czerwień alertu */
+[class*="guilds"] [class*="numberBadge"],
+[class*="guilds"] [class*="lowerBadge"],
+[class*="guilds"] [class*="upperBadge"] [class*="icon"],
+[class*="numberBadge"] {
+  clip-path: var(--cp-shape-xs) !important;
+  background: var(--cp-alert) !important;
+  color: #fff !important;
+  font-family: var(--cp-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 0 10px var(--cp-alert-glow);
+  border: none !important;
+}
+
+/* =============================================================================
+   12. LISTA KANAŁÓW → PANELE HUD
+   Każdy kanał to ścięty panel z cienką ramką, aktywny dostaje neonową listwę
+   z lewej; kategorie są terminalowe: // NAZWA + uppercase + letter-spacing.
+   ============================================================================= */
+[class*="sidebar_"],
+[class*="sidebar"] {
+  background: var(--cp-bg-2);
+  border-right: 1px solid var(--cp-neon-line);
+}
+
+/* nagłówek serwera w sidebarze */
+[class*="sidebar_"] > [class*="header"],
+[class*="sidebar_"] [class*="guildHeader"] {
+  position: relative;
+  background: var(--cp-bg-3);
+  border-bottom: 1px solid var(--cp-neon-line);
+}
+
+[class*="sidebar_"] > [class*="header"]::after,
+[class*="sidebar_"] [class*="guildHeader"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--cp-gradient);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+[class*="sidebar_"] > [class*="header"] [class*="name"],
+[class*="sidebar_"] [class*="guildName"] {
+  font-family: var(--cp-font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cp-text);
+}
+
+/* wiersz kanału */
+[data-list-item-id^="channels___"],
+[class*="sidebar_"] li[class*="containerDefault"] {
+  position: relative;
+  margin: 2px 6px !important;
+}
+
+/* panel kanału */
+[data-list-item-id^="channels___"] > *,
+[class*="sidebar_"] li[class*="containerDefault"] > [class*="wrapper"],
+[class*="sidebar_"] li[class*="containerDefault"] > a[class*="link"] {
+  position: relative;
+  clip-path: var(--cp-shape-sm) !important;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--cp-neon) 4%, transparent),
+    transparent 70%
+  );
+  border: 1px solid color-mix(in srgb, var(--cp-neon) 9%, transparent);
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+[data-list-item-id^="channels___"]:hover > *,
+[class*="sidebar_"] li[class*="containerDefault"]:hover > [class*="wrapper"],
+[class*="sidebar_"] li[class*="containerDefault"]:hover > a[class*="link"] {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--cp-neon) 9%, transparent),
+    transparent 80%
+  );
+  border-color: var(--cp-neon-line-2);
+  box-shadow: inset 0 0 16px -8px var(--cp-neon-soft);
+}
+
+/* kanał aktywny — neonowa listwa z lewej + poświata */
+[class*="sidebar_"] [class*="modeSelected"],
+[class*="sidebar_"] [class*="containerDefault"] [class*="selected"],
+[data-list-item-id^="channels___"] [class*="selected"] {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--cp-neon) 14%, transparent),
+    transparent 75%
+  ) !important;
+  border-color: var(--cp-neon-line) !important;
+}
+
+[class*="sidebar_"] [class*="modeSelected"]::before,
+[class*="sidebar_"] [class*="containerDefault"] [class*="selected"]::before,
+[class*="sidebar_"] li[class*="containerDefault"]:has([class*="modeSelected"])::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15%;
+  bottom: 15%;
+  width: 3px;
+  background: var(--cp-gradient-v);
+  box-shadow: 0 0 10px var(--cp-neon-glow);
+  pointer-events: none;
+}
+
+[class*="sidebar_"] li[class*="containerDefault"]:has([class*="modeSelected"]) {
+  filter: drop-shadow(0 0 6px var(--cp-neon-soft));
+}
+
+/* nieprzeczytany kanał — listwa w kolorze alertu (czerwień) */
+[class*="sidebar_"] [class*="modeUnread"]::before,
+[class*="sidebar_"] [class*="containerDefault"]:has([class*="modeUnread"])::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 25%;
+  bottom: 25%;
+  width: 2px;
+  background: var(--cp-alert);
+  box-shadow: 0 0 8px var(--cp-alert-glow);
+}
+
+/* ikona kanału jako mini-panel */
+[class*="sidebar_"] [class*="iconContainer"],
+[class*="sidebar_"] [class*="channelIcon"] {
+  clip-path: var(--cp-shape-xs) !important;
+  background: color-mix(in srgb, var(--cp-neon) 8%, transparent);
+  color: var(--cp-neon);
+  font-family: var(--cp-font-mono);
+}
+
+/* --- KATEGORIE: terminalowy styl // NAZWA --- */
+[data-list-item-id^="channels___"]:has(svg[class*="arrow"]) > *,
+[class*="sidebar_"] li[class*="containerDefault"]:has(svg[class*="arrow"]) > *,
+[class*="sidebar_"] [class*="category"] > * {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  clip-path: none !important;
+}
+
+[data-list-item-id^="channels___"]:has(svg[class*="arrow"]) [class*="name"],
+[class*="sidebar_"] li[class*="containerDefault"]:has(svg[class*="arrow"]) [class*="name"],
+[class*="sidebar_"] [class*="category"] [class*="name"],
+[class*="sidebar_"] [class*="sectionTitle"] {
+  font-family: var(--cp-font-mono) !important;
+  font-size: 11px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--cp-text-muted) !important;
+}
+
+[data-list-item-id^="channels___"]:has(svg[class*="arrow"]) [class*="name"]::before,
+[class*="sidebar_"] li[class*="containerDefault"]:has(svg[class*="arrow"]) [class*="name"]::before,
+[class*="sidebar_"] [class*="category"] [class*="name"]::before,
+[class*="sidebar_"] [class*="sectionTitle"]::before {
+  content: "// ";
+  color: var(--cp-neon);
+  text-shadow: 0 0 8px var(--cp-neon-glow);
+}
+
+/* nazwy kanałów — techniczny krój + subtelny neon */
+[class*="sidebar_"] [class*="name_"],
+[class*="sidebar_"] [class*="channelName"] {
+  letter-spacing: 0.02em;
+  color: var(--cp-text);
+}
+
+[class*="sidebar_"] [class*="modeSelected"] [class*="name_"],
+[class*="sidebar_"] [class*="modeSelected"] [class*="name"] {
+  color: var(--cp-neon) !important;
+}
+
+/* kanały głosowe / licznik osób */
+[class*="sidebar_"] [class*="subtitle"],
+[class*="sidebar_"] [class*="voiceUsers"] {
+  font-family: var(--cp-font-mono);
+  color: var(--cp-text-faint);
+}
+
+/* =============================================================================
+   13. NAGŁÓWEK CZATU — prefiks // + linia gradientu
+   (glitch nagłówka definiuje sekcja 10)
+   ============================================================================= */
+[class*="upperContainer"],
+[class*="chatContent"] > [class*="header"],
+[class*="chat_"] > [class*="header"] {
+  position: relative;
+  background: linear-gradient(180deg, var(--cp-bg-3), var(--cp-bg));
+  border-bottom: 1px solid var(--cp-neon-line);
+}
+
+[class*="upperContainer"]::after,
+[class*="chatContent"] > [class*="header"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--cp-gradient);
+  opacity: 0.5;
+  box-shadow: 0 0 12px var(--cp-neon-glow);
+  pointer-events: none;
+}
+
+[class*="upperContainer"] h1,
+[class*="upperContainer"] [class*="title"] {
+  font-family: var(--cp-font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cp-text);
+}
+
+/* prefiks // przed nazwą kanału w nagłówku
+   (gdy nagłówek nie ma <h1>, prefiks ląduje na kontenerze tytułu — bez dubli) */
+[class*="upperContainer"] h1::before,
+[class*="upperContainer"] [class*="title"]:not(:has(h1))::before {
+  content: "// ";
+  color: var(--cp-neon);
+  text-shadow: 0 0 10px var(--cp-neon-glow);
+}
+
+[class*="upperContainer"] [class*="topic"],
+[class*="upperContainer"] [class*="topic"] * {
+  font-family: var(--cp-font-ui);
+  color: var(--cp-text-muted);
+}
+
+/* ikony w toolbarze czatu */
+[class*="upperContainer"] svg,
+[class*="upperContainer"] [class*="toolbar"] svg {
+  color: var(--cp-text-muted);
+  transition: color 0.15s ease, filter 0.15s ease;
+}
+
+[class*="upperContainer"] [class*="toolbar"] [role="button"]:hover svg,
+[class*="upperContainer"] [class*="toolbar"] button:hover svg {
+  color: var(--cp-neon);
+  filter: drop-shadow(0 0 6px var(--cp-neon-glow));
+}
+
+/* =============================================================================
+   14. WYSZUKIWARKA (kanału / wiadomości)
+   Ścięty prostokąt, ciemne tło, cienka cyjanowa obwódka, na focus glow
+   + płynący gradient na górnej krawędzi.
+   ============================================================================= */
+[class*="searchBar"],
+[class*="searchBarComponent"],
+[class*="search_"] > [class*="searchBar"] {
+  position: relative;
+  clip-path: var(--cp-shape-sm) !important;
+  background: var(--cp-bg-input) !important;
+  border: 1px solid var(--cp-neon-line) !important;
+  box-shadow: inset 0 0 18px -12px var(--cp-neon-soft);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+[class*="searchBar"] input,
+[class*="searchBarComponent"] input {
+  background: transparent !important;
+  color: var(--cp-text) !important;
+  font-family: var(--cp-font-ui);
+  letter-spacing: 0.02em;
+}
+
+/* osobne pola wyszukiwania (ustawienia, "znajdź lub rozpocznij rozmowę") —
+   <input> wewnątrz search bara jest wykluczony, żeby nie dublować ramki */
+input[aria-label*="Szukaj" i]:not([class*="searchBar"] *):not([class*="searchBarComponent"] *),
+input[aria-label*="Search" i]:not([class*="searchBar"] *):not([class*="searchBarComponent"] *),
+input[placeholder*="Szukaj" i]:not([class*="searchBar"] *):not([class*="searchBarComponent"] *),
+input[placeholder*="Search" i]:not([class*="searchBar"] *):not([class*="searchBarComponent"] *),
+input[placeholder*="Znajdź" i]:not([class*="searchBar"] *):not([class*="searchBarComponent"] *) {
+  clip-path: var(--cp-shape-sm) !important;
+  background: var(--cp-bg-input) !important;
+  border: 1px solid var(--cp-neon-line) !important;
+  box-shadow: inset 0 0 18px -12px var(--cp-neon-soft);
+}
+
+/* focus: mocniejsza obwódka + pełna poświata */
+[class*="searchBar"]:focus-within,
+[class*="searchBarComponent"]:focus-within,
+input[aria-label*="Szukaj" i]:focus,
+input[aria-label*="Search" i]:focus {
+  border-color: var(--cp-neon) !important;
+  box-shadow: 0 0 16px -2px var(--cp-neon-glow), inset 0 0 20px -10px var(--cp-neon-soft);
+}
+
+/* płynący gradient na górnej krawędzi pola */
+[class*="searchBar"]::after,
+[class*="searchBarComponent"]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--cp-neon) 20%,
+    var(--cp-neon-2) 55%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  opacity: 0.45;
+  pointer-events: none;
+  animation: cp-flow 3.6s linear infinite;
+}
+
+[class*="searchBar"]:focus-within::after,
+[class*="searchBarComponent"]:focus-within::after {
+  opacity: 1;
+  box-shadow: 0 0 10px var(--cp-neon-glow);
+}
+
+@keyframes cp-flow {
+  from { background-position: 120% 0; }
+  to   { background-position: -120% 0; }
+}
+
+/* quick switcher (Ctrl+K) */
+[class*="quickswitcher"],
+[class*="quickSwitcher"] {
+  clip-path: var(--cp-shape) !important;
+  background: var(--cp-bg-elev) !important;
+  border: 1px solid var(--cp-neon-line-2) !important;
+  box-shadow: var(--cp-shadow), 0 0 30px -10px var(--cp-neon-glow);
+}
+
+[class*="quickswitcher"] input,
+[class*="quickSwitcher"] input {
+  clip-path: var(--cp-shape-sm) !important;
+  background: var(--cp-bg-input) !important;
+  border: 1px solid var(--cp-neon-line) !important;
+  font-family: var(--cp-font-mono);
+  color: var(--cp-text) !important;
+}
+
+[class*="quickswitcher"] [class*="result"]:hover,
+[class*="quickSwitcher"] [class*="result"]:hover,
+[class*="result"][class*="selected"] {
+  background: var(--cp-neon-faint) !important;
+  border-left: 2px solid var(--cp-neon);
+}
+
+/* =============================================================================
+   15. WIADOMOŚCI
+   Hover podświetla lewą krawędź cienką neonową linią (jak active line).
+   ============================================================================= */
+[data-list-id="chat-messages"],
+[class*="messagesWrapper"] {
+  position: relative;
+}
+
+li[id^="chat-messages-"],
+[data-list-id="chat-messages"] > li,
+li[class*="messageListItem"] {
+  position: relative;
+}
+
+li[id^="chat-messages-"]::before,
+[data-list-id="chat-messages"] > li::before,
+li[class*="messageListItem"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  background: var(--cp-gradient-v);
+  box-shadow: 0 0 10px var(--cp-neon-glow);
+  opacity: 0;
+  transition: opacity 0.16s ease;
+  pointer-events: none;
+}
+
+li[id^="chat-messages-"]:hover::before,
+[data-list-id="chat-messages"] > li:hover::before,
+li[class*="messageListItem"]:hover::before {
+  opacity: 1;
+}
+
+/* wiadomości wspominające mnie / odpowiedzi — linia w kolorze alertu */
+li[id^="chat-messages-"]:has([class*="mentioned"])::before,
+li[id^="chat-messages-"]:has([class*="replying"])::before,
+[class*="mentioned"]::before {
+  content: "";
+  background: var(--cp-alert);
+  box-shadow: 0 0 10px var(--cp-alert-glow);
+  opacity: 0.9;
+}
+
+[class*="mentioned"] {
+  background: color-mix(in srgb, var(--cp-neon) 7%, transparent) !important;
+  border-left: 2px solid var(--cp-alert) !important;
+}
+
+/* hover na wiadomości — bardzo subtelne tło */
+li[id^="chat-messages-"]:hover,
+[data-list-id="chat-messages"] > li:hover {
+  background: var(--background-message-hover) !important;
+}
+
+/* treść wiadomości */
+[id^="message-content-"] {
+  letter-spacing: 0.01em;
+}
+
+[id^="message-content-"] code,
+[class*="markup"] code {
+  clip-path: var(--cp-shape-xs) !important;
+  background: var(--cp-bg-input) !important;
+  border: 1px solid var(--cp-neon-line) !important;
+  font-family: var(--cp-font-mono) !important;
+  color: var(--cp-neon) !important;
+  padding: 0.1em 0.35em;
+}
+
+[class*="markup"] pre,
+[id^="message-content-"] pre {
+  clip-path: var(--cp-shape-sm) !important;
+  background: var(--cp-bg-input) !important;
+  border: 1px solid var(--cp-neon-line) !important;
+  box-shadow: inset 0 0 26px -18px var(--cp-neon-soft);
+}
+
+[class*="markup"] pre code,
+[id^="message-content-"] pre code {
+  border: none !important;
+  background: transparent !important;
+  clip-path: none !important;
+  color: var(--cp-text) !important;
+}
+
+/* nazwa autora + znacznik czasu */
+[class*="username"],
+[id^="message-username-"] {
+  font-family: var(--cp-font-mono);
+  letter-spacing: 0.03em;
+}
+
+[class*="timestamp"],
+[id^="message-timestamp-"],
+time {
+  font-family: var(--cp-font-mono) !important;
+  color: var(--cp-text-faint) !important;
+  letter-spacing: 0.04em;
+}
+
+/* wzmianki @nick */
+span[class*="mention"]:not([class*="mentioned"]):not([class*="mentionsBar"]),
+[class*="mention"] > span[class*="mention"],
+[class*="channelMention"] {
+  clip-path: var(--cp-shape-xs) !important;
+  background: color-mix(in srgb, var(--cp-neon) 16%, transparent) !important;
+  color: var(--cp-neon) !important;
+  font-weight: 600;
+  border: 1px solid var(--cp-neon-line-2);
+}
+
+/* tag BOT / odznaki przy nicku */
+[class*="botTag"],
+[class*="botTag"] span {
+  clip-path: var(--cp-shape-xs) !important;
+  background: var(--cp-gradient) !important;
+  color: var(--cp-on-neon) !important;
+  font-family: var(--cp-font-mono) !important;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
+
+/* separator „NOWE WIADOMOŚCI" i pigułka nieprzeczytanych */
+[class*="unreadPill"] {
+  clip-path: var(--cp-shape-xs) !important;
+  background: var(--cp-alert) !important;
+  color: #fff !important;
+  font-family: var(--cp-font-mono);
+  letter-spacing: 0.12em;
+  box-shadow: 0 0 12px var(--cp-alert-glow);
+}
+
+[class*="divider"],
+[class*="newMessagesBar"] {
+  --divider-color: var(--cp-alert);
+}
+
+[class*="newMessagesBar"] {
+  clip-path: var(--cp-shape-sm) !important;
+  background: var(--cp-gradient) !important;
+  color: var(--cp-on-neon) !important;
+  font-family: var(--cp-font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* embedy / załączniki / karty */
+[class*="embedFull"],
+[class*="embedWrapper"],
+[class*="attachment"],
+[class*="invite"],
+[class*="container"] [class*="embedFull"] {
+  clip-path: var(--cp-shape-sm) !important;
+  background: var(--cp-bg-card) !important;
+  border: 1px solid var(--cp-neon-line) !important;
+  box-shadow: none;
+}
+
+[class*="embedFull"] {
+  border-left: 2px solid var(--cp-neon) !important;
+}
+
+[class*="embedFull"]:hover {
+  border-color: var(--cp-neon) !important;
+  box-shadow: inset 0 0 24px -14px var(--cp-neon-soft);
+}
+
+/* reakcje */
+[class*="reaction"]:not([class*="reactionInner"]):not([class*="reactionCount"]):not([class*="reactions"]) {
+  clip-path: var(--cp-shape-xs) !important;
+  background: var(--cp-bg-card) !important;
+  border: 1px solid transparent !important;
+  color: var(--cp-text-muted);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+[class*="reaction"]:not([class*="reactionInner"]):not([class*="reactions"]):hover {
+  background: var(--cp-bg-hover) !important;
+  border-color: var(--cp-neon-line-2) !important;
+}
+
+[class*="reactionMe"]:not([class*="reactionInner"]) {
+  background: color-mix(in srgb, var(--cp-neon) 12%, var(--cp-bg-card)) !important;
+  border-color: var(--cp-neon) !important;
+  box-shadow: inset 0 0 14px -8px var(--cp-neon-soft);
+}
+
+[class*="reactionMe"] [class*="reactionCount"] {
+  color: var(--cp-neon);
+}
+
+/* awatary w czacie — ścięty kwadrat + chromatyczny rozjazd przy hover */
+[class*="avatarWrapper"],
+[class*="avatar_"] {
+  mask: none !important;
+  -webkit-mask: none !important;
+  background-clip: border-box;
+}
+
+div[class*="avatar"],
+a[class*="avatar"],
+svg[class*="avatar"] {
+  clip-path: var(--cp-shape-sm) !important;
+}
+
+[class*="avatarWrapper"]:hover {
+  filter: drop-shadow(-1.5px 0 0 var(--cp-neon)) drop-shadow(1.5px 0 0 var(--cp-neon-2));
+}
+
+img[class*="avatar"]:hover,
+[class*="avatarWrapper"]:hover img[class*="avatar"] {
+  box-shadow: inset 3px 0 0 var(--cp-neon), inset -3px 0 0 var(--cp-neon-2);
+}
+
+/* pasek pisze… */
+[class*="typing"] {
+  background: var(--cp-bg-2) !important;
+  border-top: 1px solid var(--cp-neon-line);
+  font-family: var(--cp-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+/* podświetlenie wiadomości (reply / jump) */
+[class*="message"]:target,
+[class*="jumpToPresentBar"] {
+  clip-path: var(--cp-shape) !important;
+  background: var(--cp-bg-elev) !important;
+  border: 1px solid var(--cp-neon-line-2) !important;
+}
+
+/* =============================================================================
+   16. POLE WIADOMOŚCI
+   ============================================================================= */
+[class*="channelTextArea"] {
+  position: relative;
+  background: transparent !important;
+}
+
+[class*="channelTextArea"] [class*="scrollableContainer"],
+[class*="channelTextArea"] [class*="textArea"],
+[class*="channelTextArea"] > [class*="wrapper"] {
+  position: relative;
+  clip-path: var(--cp-shape-sm) !important;
+  background: var(--cp-bg-input) !important;
+  border: 1px solid var(--cp-neon-line) !important;
+  box-shadow: inset 0 0 22px -14px var(--cp-neon-soft);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+[class*="channelTextArea"] [class*="scrollableContainer"]:focus-within,
+[class*="channelTextArea"] [class*="textArea"]:focus-within {
+  border-color: var(--cp-neon) !important;
+  box-shadow: 0 0 18px -4px var(--cp-neon-glow), inset 0 0 24px -12px var(--cp-neon-soft);
+}
+
+/* edytor tekstu (Slate) */
+[role="textbox"][contenteditable="true"],
+[class*="slateTextArea"],
+[class*="placeholder"] {
+  color: var(--cp-text) !important;
+  font-family: var(--cp-font-ui);
+  letter-spacing: 0.01em;
+}
+
+[class*="channelTextArea"] [class*="buttons"] svg,
+[class*="channelTextArea"] [class*="button"] svg {
+  color: var(--cp-text-muted);
+}
+
+[class*="channelTextArea"] [class*="button"]:hover svg {
+  color: var(--cp-neon);
+  filter: drop-shadow(0 0 6px var(--cp-neon-glow));
+}
+
+/* =============================================================================
+   17. LISTA CZŁONKÓW → karta HUD z klamrami [ ] i rombami statusu
+   ============================================================================= */
+[class*="membersWrap"],
+[class*="members_"],
+[class*="container"]:has(> [class*="members"]),
+[class*="container"]:has(> [class*="members_"]) {
+  position: relative;
+  background: var(--cp-bg-2);
+  border-left: 1px solid var(--cp-neon-line);
+}
+
+/* klamry [ ] w rogach karty */
+[class*="membersWrap"]::before,
+[class*="membersWrap"]::after,
+[class*="members_"]::before,
+[class*="members_"]::after,
+[class*="container"]:has(> [class*="members_"])::before,
+[class*="container"]:has(> [class*="members_"])::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+[class*="membersWrap"]::before,
+[class*="members_"]::before,
+[class*="container"]:has(> [class*="members_"])::before {
+  top: 8px;
+  left: 8px;
+  border-top: 2px solid var(--cp-neon);
+  border-left: 2px solid var(--cp-neon);
+  box-shadow: -2px -2px 12px -2px var(--cp-neon-glow);
+}
+
+[class*="membersWrap"]::after,
+[class*="members_"]::after,
+[class*="container"]:has(> [class*="members_"])::after {
+  bottom: 8px;
+  right: 8px;
+  border-bottom: 2px solid var(--cp-neon);
+  border-right: 2px solid var(--cp-neon);
+  box-shadow: 2px 2px 12px -2px var(--cp-neon-glow);
+}
+
+/* nagłówki grup: // ONLINE — 4 */
+[class*="membersGroup"],
+[role="group"] > [class*="membersGroup"] {
+  font-family: var(--cp-font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--cp-text-muted) !important;
+}
+
+[class*="membersGroup"]::before {
+  content: "// ";
+  color: var(--cp-neon);
+  text-shadow: 0 0 8px var(--cp-neon-glow);
+}
+
+/* wiersz członka */
+[class*="member_"],
+[class*="membersWrap"] [class*="member"] {
+  position: relative;
+  clip-path: var(--cp-shape-xs) !important;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+[class*="member_"]:hover,
+[class*="membersWrap"] [class*="member"]:hover {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--cp-neon) 12%, transparent),
+    transparent 85%
+  ) !important;
+  box-shadow: inset 0 0 18px -10px var(--cp-neon-soft);
+}
+
+/* neonowy romb zamiast kropki statusu */
+[class*="status"],
+[class*="avatarWrapper"] [class*="status"] {
+  filter: drop-shadow(0 0 5px var(--cp-neon-glow));
+}
+
+svg[class*="status"],
+[class*="status"] svg,
+[class*="status_"] svg,
+[class*="avatarWrapper"] svg[class*="status"],
+[class*="mask_"] [class*="status"] svg {
+  clip-path: var(--cp-shape-diamond) !important;
+}
+
+/* zdejmij maski SVG wewnątrz statusu, żeby romb był jednolity */
+[class*="status"] svg *[mask],
+[class*="status_"] svg *[mask],
+svg[class*="status"] *[mask],
+[class*="status"] svg[mask],
+svg[class*="status"][mask] {
+  mask: none !important;
+  -webkit-mask: none !important;
+}
+
+/* awatary na liście członków */
+[class*="membersWrap"] [class*="avatar"],
+[class*="membersWrap"] img[class*="avatar"] {
+  mask: none !important;
+  -webkit-mask: none !important;
+}
+
+[class*="membersWrap"] [class*="avatarWrapper"]:hover {
+  filter: drop-shadow(-1.5px 0 0 var(--cp-neon)) drop-shadow(1.5px 0 0 var(--cp-neon-2));
+}
+
+/* „O członku" / profil — karta w stylu artysty */
+[class*="userPopout"],
+[class*="userProfile"] {
+  border: 1px solid var(--cp-neon-line) !important;
+}
+
+[class*="userPopout"] [class*="banner"],
+[class*="userProfile"] [class*="banner"] {
+  clip-path: var(--cp-shape) !important;
+  filter: saturate(0.5) hue-rotate(150deg) contrast(1.1);
+}
+
+[class*="userPopout"],
+[class*="userProfileModal"] {
+  clip-path: var(--cp-shape) !important;
+  background: var(--cp-bg-elev) !important;
+  box-shadow: var(--cp-shadow), 0 0 34px -14px var(--cp-neon-glow);
+}
+
+/* =============================================================================
+   18. PANEL UŻYTKOWNIKA (dół listy kanałów)
+   Gradientowa linia cyjan→czerwień na górnej krawędzi + ścięty awatar.
+   ============================================================================= */
+[class*="panels"] {
+  position: relative;
+  background: var(--cp-bg-3) !important;
+  border-top: 1px solid transparent;
+}
+
+[class*="panels"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--cp-gradient);
+  box-shadow: 0 0 14px var(--cp-neon-glow), 0 0 14px var(--cp-alert-glow);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* awatar w panelu — ścięty róg */
+[class*="panels"] [class*="avatar"],
+[class*="panels"] [class*="avatarWrapper"] {
+  clip-path: var(--cp-shape-sm) !important;
+}
+
+[class*="panels"] [class*="avatarWrapper"]:hover {
+  filter: drop-shadow(-1.5px 0 0 var(--cp-neon)) drop-shadow(1.5px 0 0 var(--cp-neon-2));
+}
+
+[class*="panels"] [class*="name"],
+[class*="panels"] [class*="username"] {
+  font-family: var(--cp-font-mono);
+  letter-spacing: 0.03em;
+}
+
+[class*="panels"] [class*="subtext"],
+[class*="panels"] [class*="activity"] {
+  color: var(--cp-text-faint) !important;
+  font-size: 11px;
+}
+
+/* przyciski mikrofonu / słuchawek / ustawień */
+[class*="panels"] button,
+[class*="panels"] [role="button"],
+[class*="panels"] [class*="button"] {
+  clip-path: var(--cp-shape-xs) !important;
+  background: transparent;
+  color: var(--cp-text-muted);
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+[class*="panels"] button:hover,
+[class*="panels"] [role="button"]:hover,
+[class*="panels"] [class*="button"]:hover {
+  background: var(--cp-neon-faint) !important;
+  color: var(--cp-neon) !important;
+  box-shadow: inset 0 0 16px -8px var(--cp-neon-soft);
+}
+
+/* =============================================================================
+   19. SLIDERY (głośność, ustawienia)
+   Kwadratowy tor + neonowe wypełnienie z gradientem cyjan→czerwień i
+   segmentacją LED (paski co kilka px); uchwyt = ROMB; drag = czerwień.
+   ============================================================================= */
+[class*="slider"] [class*="bar"],
+[class*="slider"] [class*="track"],
+[class*="sliderBar"],
+[role="slider"] {
+  clip-path: var(--cp-shape-xs) !important;
+  background-color: var(--cp-bg-input) !important;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0 3px,
+    rgba(4, 6, 10, 0.9) 3px 5px
+  ) !important;
+  border: 1px solid var(--cp-neon-line) !important;
+  border-radius: 0 !important;
+}
+
+/* sam TOR ma 8px — [role="slider"] zostaje kontenerem (nie psujemy hitboxa) */
+[class*="slider"] [class*="bar"],
+[class*="slider"] [class*="track"],
+[class*="sliderBar"] {
+  height: 8px !important;
+}
+
+/* wypełnienie: gradient cyjan→czerwień + segmentacja LED */
+[class*="barFill"],
+[class*="slider"] [class*="fill"],
+[class*="sliderFill"] {
+  clip-path: var(--cp-shape-xs) !important;
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 3px, rgba(4, 6, 10, 0.85) 3px 5px),
+    linear-gradient(90deg, var(--cp-neon), var(--cp-neon-2)) !important;
+  background-color: transparent !important;
+  box-shadow: 0 0 12px -2px var(--cp-neon-glow);
+}
+
+/* uchwyt = romb.
+   Uwaga: clip-path daje identyczny efekt jak spec-owe rotate(45deg), ale nie
+   nadpisuje transformu, którym Discord pozycjonuje uchwyt na torze. */
+[class*="grabber"],
+[class*="slider"] [class*="thumb"],
+[role="slider"] [class*="thumb"] {
+  width: 14px !important;
+  height: 14px !important;
+  clip-path: var(--cp-shape-diamond) !important;
+  background: var(--cp-neon) !important;
+  border: none !important;
+  box-shadow: 0 0 12px var(--cp-neon-glow);
+  transition: background 0.12s ease, box-shadow 0.12s ease;
+}
+
+/* (wariant 1:1 ze specyfikacją — odkomentuj, jeśli wolisz rotate(45deg)) */
+/*
+[class*="grabber"] {
+  transform: rotate(45deg) !important;
+}
+*/
+
+[class*="slider"]:hover [class*="grabber"],
+[class*="grabber"]:hover {
+  background: color-mix(in srgb, var(--cp-neon) 80%, white) !important;
+  box-shadow: 0 0 18px var(--cp-neon-glow);
+}
+
+/* DRAG = ALERT (czerwień) */
+[class*="slider"]:active [class*="grabber"],
+[class*="grabber"]:active,
+[role="slider"]:active [class*="grabber"],
+[class*="slider"]:active [class*="barFill"] {
+  background: var(--cp-alert) !important;
+  background-image: none !important;
+  box-shadow: 0 0 18px var(--cp-alert-glow) !important;
+}
+
+[class*="slider"]:active [class*="bar"],
+[role="slider"]:active {
+  border-color: var(--cp-alert) !important;
+}
+
+/* natywne <input type=range> (np. głośność w Vencordzie) */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  background-color: var(--cp-bg-input);
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0 3px,
+    rgba(4, 6, 10, 0.9) 3px 5px
+  );
+  border: 1px solid var(--cp-neon-line);
+  clip-path: var(--cp-shape-xs);
+  accent-color: var(--cp-neon);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--cp-neon);
+  border: none;
+  border-radius: 0;
+  transform: rotate(45deg);
+  box-shadow: 0 0 12px var(--cp-neon-glow);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 8px;
+  background-color: var(--cp-bg-input);
+  background-image: repeating-linear-gradient(90deg, transparent 0 3px, rgba(4, 6, 10, 0.9) 3px 5px);
+  border: 1px solid var(--cp-neon-line);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: var(--cp-neon);
+  border: none;
+  border-radius: 0;
+  transform: rotate(45deg);
+  box-shadow: 0 0 12px var(--cp-neon-glow);
+}
+
+input[type="range"]:active::-webkit-slider-thumb,
+input[type="range"]:active::-moz-range-thumb {
+  background: var(--cp-alert);
+  box-shadow: 0 0 18px var(--cp-alert-glow);
+}
+
+/* =============================================================================
+   20. PRZEŁĄCZNIKI (toggle switches w ustawieniach)
+   Kwadratowy tor ze ściętym rogiem; włączony = neon + poświata, wyłączony =
+   ciemny panel z cyjanową obwódką. Knob nigdy nie dostaje transformu
+   (Discord sam przesuwa go na drugą stronę).
+   ============================================================================= */
+[class*="switch"],
+[role="switch"],
+[class*="checkbox"][role="switch"] {
+  clip-path: var(--cp-shape-xs) !important;
+  background: var(--cp-bg-input) !important;
+  border: 1px solid var(--cp-neon-line) !important;
+  box-shadow: inset 0 0 16px -10px var(--cp-neon-soft);
+  transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+/* stan włączony — łapany po klasie i po ARIA (odporne na zmiany klas) */
+[class*="switch"][class*="checked"],
+[class*="switch"][aria-checked="true"],
+[role="switch"][aria-checked="true"],
+[class*="switch"]:has(input:checked),
+[class*="switch"]:has(svg[class*="checked"]) {
+  background-image: linear-gradient(90deg, var(--cp-neon), var(--cp-neon-2)) !important;
+  background-color: transparent !important;
+  border-color: var(--cp-neon) !important;
+  box-shadow: 0 0 14px -2px var(--cp-neon-glow), inset 0 0 18px -8px rgba(0, 0, 0, 0.75) !important;
+}
+
+/* knob */
+[class*="switch"] [class*="slider"],
+[class*="switch"] [class*="thumb"],
+[role="switch"] > [class*="slider"] {
+  clip-path: var(--cp-shape-xs) !important;
+  background: #0B1218 !important;
+  border: 1px solid var(--cp-neon-line-2) !important;
+  box-shadow: 0 0 8px -2px rgba(0, 0, 0, 0.9);
+}
+
+[class*="switch"][class*="checked"] [class*="slider"],
+[class*="switch"][aria-checked="true"] [class*="slider"],
+[role="switch"][aria-checked="true"] > [class*="slider"] {
+  background: var(--cp-neon) !important;
+  border-color: var(--cp-on-neon) !important;
+  box-shadow: 0 0 12px var(--cp-neon-glow);
+}
+
+[class*="switch"]:hover {
+  border-color: var(--cp-neon-line-2) !important;
+}
+
+[class*="switch"]:active {
+  border-color: var(--cp-alert) !important;
+}
+
+/* Vencord/Discord checkboxy i radia */
+input[type="checkbox"]:not([class*="switch"]),
+input[type="radio"],
+[role="checkbox"],
+[role="radio"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  clip-path: var(--cp-shape-xs);
+  background: var(--cp-bg-input);
+  border: 1px solid var(--cp-neon-line-2);
+  border-radius: 0;
+  transition: background 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+input[type="checkbox"]:not([class*="switch"]):hover,
+input[type="radio"]:hover,
+[role="checkbox"]:hover,
+[role="radio"]:hover {
+  border-color: var(--cp-neon);
+  box-shadow: 0 0 10px -2px var(--cp-neon-glow);
+}
+
+input[type="checkbox"]:not([class*="switch"]):checked,
+input[type="radio"]:checked,
+[role="checkbox"][aria-checked="true"],
+[role="radio"][aria-checked="true"] {
+  background: var(--cp-neon);
+  border-color: var(--cp-neon);
+  box-shadow: 0 0 12px -2px var(--cp-neon-glow);
+}
+
+input[type="radio"]:checked,
+[role="radio"][aria-checked="true"] {
+  clip-path: var(--cp-shape-diamond);
+  background: var(--cp-neon);
+}
+
+/* fokus klawiatury — zawsze neonowy pierścień */
+:focus-visible {
+  outline: 1px solid var(--cp-neon) !important;
+  outline-offset: 1px;
+  box-shadow: 0 0 14px -2px var(--cp-neon-glow) !important;
+}
+
+/* =============================================================================
+   21. PRZYCISKI / INPUTY / SELECTY
+   ============================================================================= */
+[class*="lookFilled"],
+[class*="lookOutlined"],
+[class*="lookLink"],
+button[class*="button"],
+[role="button"][class*="button"] {
+  clip-path: var(--cp-shape-sm) !important;
+  font-family: var(--cp-font-ui);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-weight: 700;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+/* brand / primary — neonowe wypełnienie z ciemnym tekstem */
+[class*="lookFilled"][class*="colorBrand"],
+[class*="lookFilled"][class*="colorGreen"],
+[class*="lookFilled"][class*="colorPrimary"] {
+  background: var(--cp-neon) !important;
+  color: var(--cp-on-neon) !important;
+  border: none !important;
+  box-shadow: 0 0 16px -4px var(--cp-neon-glow);
+}
+
+[class*="lookFilled"][class*="colorBrand"]:hover,
+[class*="lookFilled"][class*="colorGreen"]:hover,
+[class*="lookFilled"][class*="colorPrimary"]:hover {
+  background: color-mix(in srgb, var(--cp-neon) 82%, white) !important;
+  box-shadow: 0 0 22px -2px var(--cp-neon-glow);
+}
+
+[class*="lookFilled"][class*="colorBrand"]:active,
+[class*="lookFilled"][class*="colorGreen"]:active,
+[class*="lookFilled"][class*="colorPrimary"]:active {
+  background: color-mix(in srgb, var(--cp-neon) 72%, black) !important;
+}
+
+/* danger / destructive — alert czerwień */
+[class*="lookFilled"][class*="colorRed"],
+[class*="lookFilled"][class*="colorDanger"] {
+  background: var(--cp-alert) !important;
+  color: #fff !important;
+  box-shadow: 0 0 16px -4px var(--cp-alert-glow);
+}
+
+/* outline — przezroczysty + neonowa obwódka */
+[class*="lookOutlined"][class*="colorBrand"] {
+  background: transparent !important;
+  color: var(--cp-neon) !important;
+  border: 1px solid var(--cp-neon) !important;
+  box-shadow: inset 0 0 18px -12px var(--cp-neon-soft);
+}
+
+[class*="lookOutlined"][class*="colorBrand"]:hover {
+  background: var(--cp-neon-faint) !important;
+  box-shadow: 0 0 16px -4px var(--cp-neon-glow);
+}
+
+[class*="lookOutlined"][class*="colorRed"],
+[class*="lookOutlined"][class*="colorDanger"] {
+  background: transparent !important;
+  color: var(--cp-alert) !important;
+  border: 1px solid var(--cp-alert) !important;
+}
+
+[class*="colorLink"] {
+  background: transparent !important;
+  color: var(--cp-neon) !important;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+[class*="colorLink"]:hover {
+  text-shadow: 0 0 10px var(--cp-neon-glow);
+  text-decoration: none;
+}
+
+/* pola tekstowe, textarea, selecty */
+input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([class*="searchBar"] *):not([class*="searchBarComponent"] *):not([class*="quickswitcher"] *):not([class*="quickSwitcher"] *),
+textarea,
+select,
+[class*="input_"]:not([class*="inputWrapper"]):not([class*="searchBar"] *):not([class*="searchBarComponent"] *),
+[class*="select_"] [class*="lookFilled"] {
+  clip-path: var(--cp-shape-xs) !important;
+  background: var(--cp-bg-input) !important;
+  border: 1px solid var(--cp-neon-line) !important;
+  color: var(--cp-text) !important;
+  font-family: var(--cp-font-ui);
+  border-radius: 0 !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([class*="searchBar"] *):focus,
+textarea:focus,
+select:focus,
+[class*="input_"]:focus {
+  border-color: var(--cp-neon) !important;
+  box-shadow: 0 0 14px -2px var(--cp-neon-glow) !important;
+  outline: none !important;
+}
+
+/* selecty / comboboxy */
+[class*="select_"] [class*="lookFilled"],
+[role="combobox"] {
+  clip-path: var(--cp-shape-xs) !important;
+  background: var(--cp-bg-input) !important;
+  border: 1px solid var(--cp-neon-line) !important;
+}
+
+[class*="select_"]:hover [class*="lookFilled"],
+[role="combobox"]:hover {
+  border-color: var(--cp-neon-line-2) !important;
+}
+
+/* =============================================================================
+   22. MENU / MODALE / TOOLTIPY / POPOUTY
+   ============================================================================= */
+[role="menu"],
+[class*="menu_"],
+[class*="menuContainer"],
+[class*="popout"],
+[class*="layerContainer"] > [class*="popout"] {
+  clip-path: var(--cp-shape) !important;
+  background: var(--cp-bg-elev) !important;
+  border: 1px solid var(--cp-neon-line-2) !important;
+  box-shadow: var(--cp-shadow), 0 0 30px -16px var(--cp-neon-glow) !important;
+}
+
+[role="menuitem"],
+[class*="menu_"] [role="menuitem"],
+[class*="menu"] [class*="item"]:not([class*="itemIcon"]) {
+  position: relative;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+[role="menuitem"]:hover,
+[role="menuitem"]:focus,
+[class*="menu"] [class*="item"]:not([class*="itemIcon"]):hover {
+  background: var(--cp-neon-faint) !important;
+  color: var(--cp-neon) !important;
+  box-shadow: inset 2px 0 0 var(--cp-neon);
+}
+
+[role="menuitem"][class*="colorDanger"],
+[role="menuitem"][class*="danger"] {
+  color: var(--cp-alert) !important;
+}
+
+[role="menuitem"][class*="danger"]:hover {
+  background: color-mix(in srgb, var(--cp-alert) 14%, transparent) !important;
+  box-shadow: inset 2px 0 0 var(--cp-alert);
+}
+
+[class*="separator_"],
+[role="separator"] {
+  height: 1px !important;
+  background: var(--cp-neon-line) !important;
+}
+
+/* modale i dialogi */
+[role="dialog"],
+[class*="modal"],
+[class*="root_"] > [class*="modal"],
+[class*="focusLock"] > [class*="root"] {
+  clip-path: var(--cp-shape) !important;
+  background: var(--cp-bg-elev) !important;
+  border: 1px solid var(--cp-neon-line-2) !important;
+  box-shadow: var(--cp-shadow), 0 0 44px -18px var(--cp-neon-glow) !important;
+}
+
+/* tooltipy */
+[role="tooltip"],
+[class*="tooltip"],
+[class*="tooltipPointer"] {
+  clip-path: var(--cp-shape-xs) !important;
+  background: var(--cp-bg-elev) !important;
+  border: 1px solid var(--cp-neon-line-2) !important;
+  color: var(--cp-text) !important;
+  font-family: var(--cp-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  box-shadow: 0 0 18px -6px var(--cp-neon-glow);
+}
+
+/* karty w modalu (np. ustawienia bota) */
+[class*="card_"],
+[class*="cardPrimary"] {
+  clip-path: var(--cp-shape-sm) !important;
+  background: var(--cp-bg-card) !important;
+  border: 1px solid var(--cp-neon-line) !important;
+}
+
+[class*="card_"]:hover,
+[class*="cardPrimary"]:hover {
+  border-color: var(--cp-neon) !important;
+  box-shadow: inset 0 0 24px -14px var(--cp-neon-soft);
+}
+
+/* okno udostępniania / strumienia / rozmowy */
+[class*="callContainer"],
+[class*="videoWrapper"],
+[class*="voicePanel"],
+[class*="streamPreview"] {
+  clip-path: var(--cp-shape) !important;
+  background: var(--cp-bg-2) !important;
+  border: 1px solid var(--cp-neon-line) !important;
+}
+
+/* =============================================================================
+   23. USTAWIENIA
+   ============================================================================= */
+[class*="sidebarRegion"],
+[class*="side_"] {
+  background: var(--cp-bg-2);
+}
+
+[class*="sidebarRegion"] [class*="item"],
+[class*="side_"] [class*="item"],
+[role="tab"] {
+  clip-path: var(--cp-shape-xs) !important;
+  font-family: var(--cp-font-ui);
+  letter-spacing: 0.04em;
+  color: var(--cp-text-muted) !important;
+  transition: background 0.14s ease, color 0.14s ease, box-shadow 0.14s ease;
+}
+
+[class*="sidebarRegion"] [class*="item"]:hover,
+[class*="side_"] [class*="item"]:hover,
+[role="tab"]:hover {
+  background: var(--cp-neon-faint) !important;
+  color: var(--cp-neon) !important;
+}
+
+[role="tab"][aria-selected="true"],
+[class*="sidebarRegion"] [class*="item"][class*="selected"],
+[class*="side_"] [class*="item"][class*="selected"] {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--cp-neon) 16%, transparent),
+    transparent 85%
+  ) !important;
+  color: var(--cp-neon) !important;
+  box-shadow: inset 2px 0 0 var(--cp-neon);
+}
+
+/* tytuły sekcji ustawień w stylu terminala */
+[class*="h5"],
+[class*="sectionTitle"],
+[class*="header_"] h2,
+[class*="header_"] h3 {
+  font-family: var(--cp-font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+[class*="description_"],
+[class*="divider_"] + [class*="description"] {
+  color: var(--cp-text-muted) !important;
+}
+
+/* vencordowe przełączniki/pluginy */
+[class*="pluginCard"],
+[class*="settingCard"] {
+  clip-path: var(--cp-shape-sm) !important;
+  background: var(--cp-bg-card) !important;
+  border: 1px solid var(--cp-neon-line) !important;
+}
+
+/* pasek przewijania w ustawieniach */
+[class*="contentRegion"],
+[class*="contentColumn"] {
+  background: var(--cp-bg);
+}
+
+/* =============================================================================
+   24. SCROLLBARY / ODZNAKI / DROBNE
+   ============================================================================= */
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--cp-neon) 30%, transparent);
+  border: none;
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cp-neon);
+  box-shadow: 0 0 12px var(--cp-neon-glow);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox/silniki bez ::-webkit-scrollbar.
+   UWAGA: w Chromium 121+ ustawienie scrollbar-width/scrollbar-color WYŁĄCZA
+   stylowanie przez ::-webkit-scrollbar — dlatego trzymamy je w @supports. */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-color: color-mix(in srgb, var(--cp-neon) 30%, transparent) transparent;
+    scrollbar-width: thin;
+  }
+}
+
+/* odznaki ról / kanałów — małe ścięte tagi */
+[class*="role_"],
+[class*="rolePill"],
+[class*="badge_"] {
+  clip-path: var(--cp-shape-xs) !important;
+  font-family: var(--cp-font-mono);
+  letter-spacing: 0.06em;
+}
+
+[class*="role_"] {
+  border: 1px solid currentColor !important;
+  background: color-mix(in srgb, currentColor 12%, transparent) !important;
+}
+
+/* pasek powiadomień (np. aktualizacja klienta) */
+[class*="notice"],
+[class*="noticeBar"] {
+  clip-path: var(--cp-shape-xs) !important;
+  background: var(--cp-bg-3) !important;
+  border-bottom: 1px solid var(--cp-neon-line) !important;
+  font-family: var(--cp-font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+[class*="notice"] [class*="close"],
+[class*="notice"] [class*="button"] {
+  color: var(--cp-neon) !important;
+}
+
+/* pasek tytułu okna (Windows) */
+[class*="titleBar"],
+[class*="typeWindows"] {
+  background: var(--cp-bg-3) !important;
+  border-bottom: 1px solid var(--cp-neon-line);
+}
+
+[class*="typeWindows"]::after,
+[class*="titleBar"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--cp-gradient);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+[class*="typeWindows"] [class*="winButton"]:hover,
+[class*="titleBar"] [class*="winButton"]:hover {
+  background: var(--cp-neon-faint) !important;
+}
+
+[class*="typeWindows"] [class*="winButtonClose"]:hover {
+  background: var(--cp-alert) !important;
+}
+
+/* lista znajomych / dom / nitro */
+[class*="peopleColumn"],
+[class*="nowPlayingColumn"],
+[class*="applicationStore"],
+[class*="shop"] {
+  background: var(--cp-bg-2) !important;
+}
+
+[class*="peopleListItem"]:hover,
+[class*="itemCard"]:hover {
+  clip-path: var(--cp-shape-sm) !important;
+  border-color: var(--cp-neon) !important;
+  box-shadow: inset 0 0 24px -14px var(--cp-neon-soft);
+}
+
+/* ekran logowania / "Discord is outdated" — ciemna baza CyberEdge */
+[class*="appAsidePanelWrapper"],
+[class*="app_"] > [class*="bg"],
+[class*="bg_"] {
+  background: var(--cp-bg) !important;
+}
+
+/* spinner/loader w neonie */
+[class*="spinner"] [class*="path"],
+[class*="loading"] [class*="path"] {
+  stroke: var(--cp-neon) !important;
+}
+
+/* =============================================================================
+   25. prefers-reduced-motion
+   Wyłącza wszystkie animacje motywu. Poświata i statyczny RGB-split zostają
+   (to już nie ruch) — jeśli chcesz też je usunąć, zakomentuj reguły niżej.
+   ============================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  #app-mount::before,
+  #app-mount::after,
+  [class*="searchBar"]::after,
+  [class*="searchBarComponent"]::after,
+  [class*="upperContainer"] h1,
+  [class*="upperContainer"] [class*="title"],
+  [class*="sidebar_"] [class*="header_"] [class*="name"],
+  [class*="sidebar_"] [class*="modeSelected"] [class*="name"],
+  [class*="panels"]::before {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* statyczna wersja glitcha — bez ruchu, tylko rozjazd RGB */
+  [class*="upperContainer"] h1,
+  [class*="upperContainer"] [class*="title"],
+  [class*="sidebar_"] [class*="modeSelected"] [class*="name"] {
+    text-shadow: -1px 0 var(--cp-neon), 1px 0 var(--cp-neon-2);
+    transform: none !important;
+  }
+
+  /* płynący gradient na górnej krawędzi search bara też stoi */
+  [class*="searchBar"]::after,
+  [class*="searchBarComponent"]::after {
+    opacity: 0.5;
+    background-position: 50% 0;
+  }
+}
