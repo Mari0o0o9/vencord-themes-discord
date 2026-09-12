@@ -2037,15 +2037,29 @@ select:focus,
 /* =============================================================================
    22. MENU / MODALE / TOOLTIPY / POPOUTY
    ============================================================================= */
+/* FIX: clip-path wydzielony do osobnej reguły. Discord renderuje podmenu
+   („Wycisz serwer" → na jak długo, „Ustawienia powiadomień" itd.) z portal: false,
+   czyli jako potomka menu nadrzędnego, pozycjonowanego obok niego. clip-path
+   obcina WSZYSTKICH potomków do kształtu elementu, więc podmenu było niewidoczne.
+   Menu, które ma w środku otwarte podmenu (div.submenuPaddingContainer_* >
+   div.submenu_*.menu_*), na ten czas traci ścięte narożniki; samo podmenu je ma. */
 [role="menu"],
 [class*="menu_"],
 [class*="menuContainer"],
 [class*="popout"],
 [class*="layerContainer"] > [class*="popout"] {
-  clip-path: var(--cp-shape) !important;
   background: var(--cp-bg-elev) !important;
   border: 1px solid var(--cp-neon-line-2) !important;
   box-shadow: var(--cp-shadow), 0 0 30px -16px var(--cp-neon-glow) !important;
+}
+
+:is(
+  [role="menu"],
+  [class*="menu_"],
+  [class*="menuContainer"],
+  [class*="popout"]
+):not(:has([class*="submenuPaddingContainer"], [class*="submenu_"])) {
+  clip-path: var(--cp-shape) !important;
 }
 
 [role="menuitem"],
@@ -2091,9 +2105,14 @@ select:focus,
 }
 
 /* tooltipy */
+/* FIX: ramka tylko na samym dymku. [class*="tooltip"] łapał też jego dzieci
+   i warstwę: div.tooltipContent_* (wewnętrzna, druga ramka wokół tekstu),
+   div.tooltipLayer_* oraz div.tooltipPointer_* (strzałka dostawała tło i ramkę).
+   Struktura Discorda: tooltipLayer_* > div.tooltip_*[role="tooltip"] >
+   (caret_* > svg | tooltipPointer_*) + tooltipContent_*.
+   :not([role="tooltip"] *) chroni przed ramką na klasach typu tooltip_* wewnątrz dymku. */
 [role="tooltip"],
-[class*="tooltip"],
-[class*="tooltipPointer"] {
+[class*="tooltip_"]:not([role="tooltip"] *) {
   clip-path: var(--cp-shape-xs) !important;
   background: var(--cp-bg-elev) !important;
   border: 1px solid var(--cp-neon-line-2) !important;
@@ -2103,6 +2122,26 @@ select:focus,
   letter-spacing: 0.05em;
   text-transform: uppercase;
   box-shadow: 0 0 18px -6px var(--cp-neon-glow);
+  --tooltip-pointer-bg: var(--cp-bg-elev); /* kolor natywnej strzałki (starszy tooltip) */
+}
+
+/* FIX: typografia treści zostaje jak dotąd, ale bez tła/ramki/clip-path */
+[role="tooltip"] [class*="tooltipContent"] {
+  color: var(--cp-text) !important;
+  font-family: var(--cp-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* FIX: strzałka nowego tooltipa (svg w caret_*) w kolorach dymku zamiast
+   domyślnych --background-surface-high / --border-subtle */
+[role="tooltip"] [class*="caretFill"] {
+  fill: var(--cp-bg-elev);
+}
+
+[role="tooltip"] [class*="caretStroke"] {
+  stroke: var(--cp-neon-line-2);
 }
 
 /* karty w modalu (np. ustawienia bota) */
