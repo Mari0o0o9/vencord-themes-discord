@@ -1,0 +1,44 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CyberEdge icons</title>
+<style>
+  :root { --bg:#0A0E14; --cyan:#3EE8E0; --red:#E23838; --purple:#8B5CF6; --gray:#B8C5D6; }
+  body { margin:0; padding:24px; background:var(--bg); color:var(--gray); font:12px "Share Tech Mono", Consolas, monospace; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px; }
+  .card { border:1px solid color-mix(in srgb, var(--cyan) 18%, transparent); padding:12px;
+          clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); }
+  .row { display:flex; gap:14px; align-items:center; margin-bottom:10px; }
+  .ico { position:relative; display:grid; place-items:center; width:40px; height:40px; color:var(--gray); }
+  .ico svg { width:var(--s,32px); height:var(--s,32px); }
+  .active { color:var(--cyan); filter:drop-shadow(0 0 3px color-mix(in srgb, var(--cyan) 70%, transparent)); }
+  .active.danger { color:var(--red); filter:drop-shadow(0 0 3px color-mix(in srgb, var(--red) 70%, transparent)); }
+  /* hover: stan aktywny + fioletowe klamry */
+  .ico.hover:hover { color:var(--cyan); filter:drop-shadow(0 0 3px color-mix(in srgb, var(--cyan) 70%, transparent)); }
+  .ico.hover:hover::before, .ico.hover:hover::after { content:""; position:absolute; width:6px; height:6px; border:1px solid var(--purple); }
+  .ico.hover:hover::before { top:0; left:0; border-right:0; border-bottom:0; }
+  .ico.hover:hover::after { bottom:0; right:0; border-left:0; border-top:0; }
+  .name::before { content:"// "; color:var(--cyan); }
+</style>
+<div class="grid" id="grid"></div>
+<script>
+const icons = ["settings","mic","mic-muted","headphones","headphones-deafened","camera","screen-share","speaker","hang-up"];
+(async () => {
+  for (const n of icons) {
+    const svg = await fetch(n + ".svg").then(r => r.text());
+    const danger = n === "hang-up" ? " danger" : "";
+    document.getElementById("grid").insertAdjacentHTML("beforeend", `
+      <div class="card">
+        <div class="row">
+          <div class="ico">${svg}</div>
+          <div class="ico active${danger}">${svg}</div>
+          <div class="ico hover${danger}" title="hover">${svg}</div>
+        </div>
+        <div class="row">
+          <div class="ico" style="--s:24px">${svg}</div>
+          <div class="ico active${danger}" style="--s:24px">${svg}</div>
+        </div>
+        <div class="name">${n}</div>
+      </div>`);
+  }
+})();
+</script>
