@@ -207,6 +207,10 @@
   --cp-glitch-speed: 3.4s; /* spokojny, stały cykl glitcha                  */
   --cp-glitch-hover-speed: 0.55s; /* przyspieszone szarpnięcia na hover    */
   --cp-flicker: 6s;        /* migotanie kineskopu                           */
+
+  /* --- ruch (animacje) --- */
+  --cp-pulse: 2.8s;        /* neonowe pulsowanie (listwy, klamry, statusy)  */
+  --cp-ease-snap: cubic-bezier(0.2, 0.9, 0.1, 1); /* szybki start, twarde lądowanie */
 }
 
 /* =============================================================================
@@ -502,10 +506,13 @@ a {
    Jeśli kiedyś Discord zajmie te pseudo-elementy: podmień selektory na
    body::before (scanlines) i body::after (winieta) — reszta bez zmian.
    ============================================================================= */
+/* ANIM: dryf linii przez transform zamiast background-position — warstwa jest
+   o jeden rozstaw linii wyższa i przesuwana na GPU, więc pełnoekranowy overlay
+   nie jest przemalowywany w każdej klatce. */
 #app-mount::before {
   content: "";
   position: fixed;
-  inset: 0;
+  inset: calc(-1 * var(--cp-scanline-size)) 0 0 0;
   z-index: 2147483000;
   pointer-events: none;
   background:
@@ -516,6 +523,7 @@ a {
       transparent 1px,
       transparent var(--cp-scanline-size)
     );
+  will-change: transform, opacity;
   animation: cp-scanline-drift 9s linear infinite, cp-flicker var(--cp-flicker) steps(1, end) infinite;
 }
 
@@ -535,9 +543,16 @@ a {
     linear-gradient(270deg, color-mix(in srgb, var(--cp-neon-2) 3%, transparent), transparent 12%);
 }
 
+/* Scanlines i winieta leżą nad całym oknem, więc zaciemniały też transmisję/kamerę.
+   Gdy w widoku rozmowy albo w okienku PiP gra wideo, overlay znika. */
+#app-mount:has([class*="callContainer"] video, [class*="pictureInPicture"] video)::before,
+#app-mount:has([class*="callContainer"] video, [class*="pictureInPicture"] video)::after {
+  content: none;
+}
+
 @keyframes cp-scanline-drift {
-  from { background-position: 0 0; }
-  to   { background-position: 0 var(--cp-scanline-size); }
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(0, var(--cp-scanline-size), 0); }
 }
 
 @keyframes cp-flicker {
@@ -595,6 +610,20 @@ a {
   background: var(--cp-gradient);
   opacity: 0.35;
   pointer-events: none;
+  transform-origin: 0 50%;
+}
+
+/* ANIM: przejście między kanałami — czat „odpala się" z mignięciem neonu,
+   a krawędź nad nim rysuje się od lewej. Discord montuje czat na nowo przy
+   zmianie kanału, więc animacja startuje sama; fill-mode: backwards = brak
+   błysku pierwszej klatki, a po zakończeniu żaden transform nie zostaje. */
+[class*="chatContent"] {
+  animation: cp-boot-in 0.3s var(--cp-ease-snap) backwards;
+}
+
+[class*="chatContent"]::before,
+[class*="messagesWrapper"]::before {
+  animation: cp-line-draw 0.6s var(--cp-ease-snap) backwards;
 }
 
 /* =============================================================================
@@ -603,6 +632,23 @@ a {
    cp-glitch        — spokojny, stały cykl co --cp-glitch-speed (3.4s):
                       prawie statyczny RGB-split + krótkie, punktowe szarpnięcia.
    cp-glitch-burst  — szybsza, mocniejsza wersja na hover (--cp-glitch-hover-speed).
+   ANIM: oba cykle lecą na steps(1, end) — cyfrowe przeskoki zamiast płynnego
+   przejścia. Wygląda jak prawdziwy glitch, a text-shadow przemalowuje się tylko
+   na granicach klatek kluczowych (~8× na cykl), nie w każdej klatce.
+
+   Pozostałe klatki ruchu (tylko transform / opacity):
+   cp-ignite        — „zapłon" świetlówki: kilka twardych mignięć przy hover/zmianie stanu
+   cp-neon-pulse    — spokojne oddychanie neonu (listwy, klamry HUD)
+   cp-boot-in       — wejście panelu: fade + 4px ślizg + mignięcie
+   cp-boot          — to samo bez ruchu (dla elementów, których nie przesuwamy)
+   cp-slide-in      — wysuw z lewej z mignięciem (menu, powiadomienia, wiadomości)
+   cp-line-draw     — neonowa linia rysowana od lewej (scaleX)
+   cp-bar-in        — listwa aktywnego kanału wystrzeliwuje od środka (scaleY)
+   cp-avatar-glitch — szarpnięcie awatara na hover
+   cp-status-pulse  — dioda statusu online: podwójne mrugnięcie co --cp-pulse
+   cp-typing        — kropki „pisze…" jako migające diody
+   (lokalnie przy użyciu: cp-scanline-drift / cp-flicker — sekcja 8,
+   cp-flow — sekcja 14, cp-msg-line — sekcja 15)
    ============================================================================= */
 @keyframes cp-glitch {
   0%, 100% {
@@ -673,6 +719,77 @@ a {
   }
 }
 
+@keyframes cp-ignite {
+  0%        { opacity: 0.35; }
+  14%       { opacity: 1; }
+  26%       { opacity: 0.5; }
+  40%       { opacity: 1; }
+  56%       { opacity: 0.75; }
+  68%, 100% { opacity: 1; }
+}
+
+@keyframes cp-neon-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+
+@keyframes cp-boot-in {
+  0%   { opacity: 0; transform: translate3d(0, 4px, 0); }
+  30%  { opacity: 0.8; }
+  40%  { opacity: 0.35; }
+  55%  { opacity: 1; }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes cp-boot {
+  0%   { opacity: 0; }
+  30%  { opacity: 0.8; }
+  45%  { opacity: 0.3; }
+  60%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+@keyframes cp-slide-in {
+  0%   { opacity: 0; transform: translate3d(-6px, 0, 0); }
+  40%  { opacity: 1; }
+  55%  { opacity: 0.5; transform: translate3d(1px, 0, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes cp-line-draw {
+  0%   { transform: scaleX(0); opacity: 1; }
+  70%  { opacity: 1; }
+  100% { transform: scaleX(1); }
+}
+
+@keyframes cp-bar-in {
+  0%   { transform: scaleY(0); }
+  60%  { transform: scaleY(1.15); }
+  100% { transform: scaleY(1); }
+}
+
+@keyframes cp-avatar-glitch {
+  0%   { transform: translate3d(0, 0, 0); }
+  20%  { transform: translate3d(-1.5px, 0, 0); }
+  40%  { transform: translate3d(1.5px, 0.5px, 0); }
+  60%  { transform: translate3d(-1px, -0.5px, 0); }
+  80%  { transform: translate3d(1px, 0, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes cp-status-pulse {
+  0%, 68%, 76%, 100% { opacity: 1; }
+  72%, 80%           { opacity: 0.4; }
+}
+
+@keyframes cp-typing {
+  0%, 100% { opacity: 0.25; transform: scale(0.75); }
+  20%      { opacity: 1;    transform: scale(1.1); }
+  35%      { opacity: 0.55; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1); }
+  70%      { opacity: 0.25; transform: scale(0.75); }
+}
+
 /* wspólny zestaw elementów z glitchem: nagłówek kanału, nazwa serwera,
    aktywny kanał na liście */
 [class*="upperContainer"] h1,
@@ -682,8 +799,8 @@ a {
 [class*="sidebar_"] [class*="modeSelected"] [class*="name"],
 [class*="sidebar_"] [class*="containerDefault"] [class*="selected"] [class*="name"],
 [class*="name_"]:is([class*="selected"]) {
-  animation: cp-glitch var(--cp-glitch-speed) linear infinite;
-  will-change: text-shadow, transform;
+  animation: cp-glitch var(--cp-glitch-speed) steps(1, end) infinite;
+  will-change: transform;
 }
 
 /* hover → szybszy, ostrzejszy cykl */
@@ -797,6 +914,15 @@ nav[class*="guilds"],
   border-color: var(--cp-neon);
 }
 
+/* ANIM: ramka kafelka „zapala się" jak świetlówka przy hover i przy wyborze serwera.
+   Tylko opacity pseudo-elementu motywu — <svg>/BlobMask Discorda nietknięte.
+   Obie reguły dają tę samą wartość animation, więc hover na aktywnym serwerze
+   nie restartuje mignięcia. */
+[class*="guilds"] [class*="blobContainer"] > [class*="wrapper_"]:hover::after,
+[class*="guilds"] [class*="blobContainer"][class*="selected"] > [class*="wrapper_"]::after {
+  animation: cp-ignite 0.42s steps(1, end);
+}
+
 /* neonowa listwa z lewej (jak active line w bibliotece Spicetify)
    Starsze wersje Discorda: .pill_* > .wrapper_* > .item_*
    Obecna wersja:            .listItem_* > .wrapper_*.overlay_* > span.item_* */
@@ -843,6 +969,18 @@ nav[class*="guilds"],
   clip-path: var(--cp-shape-sm) !important;
   background-color: var(--cp-bg-card) !important;
   border: 1px solid var(--cp-neon-line);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+[class*="guilds"] [class*="folderIconWrapper"]:hover {
+  border-color: var(--cp-neon) !important;
+  box-shadow: inset 0 0 14px -6px var(--cp-neon-soft), 0 0 10px -2px var(--cp-neon-glow);
+}
+
+/* glif folderu — neon zamiast koloru wybranego przez usera, ze świeceniem */
+[class*="guilds"] [class*="folderIconWrapper"] svg {
+  color: var(--cp-neon) !important;
+  filter: drop-shadow(0 0 4px var(--cp-neon-glow));
 }
 
 /* odznaki (nieprzeczytane / wzmianki) — czerwień alertu */
@@ -871,6 +1009,18 @@ nav[class*="guilds"],
   border-right: 1px solid var(--cp-neon-line);
 }
 
+/* FIX: przyciski kamery/ekranu/aktywności/soundboardu nad panelem użytkownika
+   (widoczne po połączeniu z kanałem głosowym) bywają natywnie kolorowane przez
+   --brand-500, które sekcja 6 też mapuje na --cp-neon — ikona i tło wychodzą
+   tym samym kolorem, więc ikona znika. Te przyciski leżą w panels_* (poza
+   sidebarList_*), a tło jest neonowe także na hover — ikona dostaje ciemny
+   --cp-on-neon, jak tekst na neonowych przyciskach brand. Zawężone do
+   actionButtons_*, żeby nie przyciemnić mikrofonu/słuchawek/rozłączenia. */
+[class*="panels"] [class*="actionButtons"] button svg,
+[class*="panels"] [class*="actionButtons"] [role="button"] svg {
+  color: var(--cp-on-neon) !important;
+}
+
 /* nagłówek serwera w sidebarze */
 [class*="sidebar_"] > [class*="header"],
 [class*="sidebar_"] [class*="guildHeader"] {
@@ -890,6 +1040,14 @@ nav[class*="guilds"],
   background: var(--cp-gradient);
   opacity: 0.55;
   pointer-events: none;
+  transform-origin: 0 50%;
+  animation: cp-line-draw 0.6s var(--cp-ease-snap) backwards; /* ANIM: rysuje się po zmianie serwera */
+}
+
+/* ANIM: przejście między serwerami — lista kanałów wysuwa się z mignięciem.
+   Discord montuje listę na nowo przy zmianie serwera; bez zmiany nic się nie dzieje. */
+[data-list-id="channels"] {
+  animation: cp-slide-in 0.3s var(--cp-ease-snap) backwards;
 }
 
 [class*="sidebar_"] > [class*="header"] [class*="name"],
@@ -958,6 +1116,11 @@ nav[class*="guilds"],
   background: var(--cp-gradient-v);
   box-shadow: 0 0 10px var(--cp-neon-glow);
   pointer-events: none;
+  /* ANIM: listwa wystrzeliwuje od środka po wyborze kanału, potem oddycha */
+  transform-origin: 50% 50%;
+  animation:
+    cp-bar-in 0.3s var(--cp-ease-snap) backwards,
+    cp-neon-pulse var(--cp-pulse) ease-in-out 0.3s infinite;
 }
 
 [class*="sidebar_"] li[class*="containerDefault"]:has([class*="modeSelected"]) {
@@ -975,6 +1138,7 @@ nav[class*="guilds"],
   width: 2px;
   background: var(--cp-alert);
   box-shadow: 0 0 8px var(--cp-alert-glow);
+  animation: cp-ignite 0.5s steps(1, end); /* ANIM: jednorazowy alert przy nowej wiadomości */
 }
 
 /* ikona kanału jako mini-panel */
@@ -1143,14 +1307,17 @@ input[aria-label*="Search" i]:focus {
   box-shadow: 0 0 16px -2px var(--cp-neon-glow), inset 0 0 20px -10px var(--cp-neon-soft);
 }
 
-/* płynący gradient na górnej krawędzi pola */
+/* płynący gradient na górnej krawędzi pola
+   ANIM: pasek ma 200% szerokości i powtarzany kafel gradientu co 50% — przesunięcie
+   o -50% → 0 daje bezszwową pętlę na transform (GPU) zamiast background-position
+   (repaint w każdej klatce). Nadmiar obcina clip-path pola. */
 [class*="searchBar"]::after,
 [class*="searchBarComponent"]::after {
   content: "";
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
+  width: 200%;
   height: 2px;
   background: linear-gradient(
     90deg,
@@ -1159,9 +1326,11 @@ input[aria-label*="Search" i]:focus {
     var(--cp-neon-2) 55%,
     transparent 100%
   );
-  background-size: 220% 100%;
+  background-size: 50% 100%;
+  background-repeat: repeat-x;
   opacity: 0.45;
   pointer-events: none;
+  will-change: transform;
   animation: cp-flow 3.6s linear infinite;
 }
 
@@ -1172,8 +1341,8 @@ input[aria-label*="Search" i]:focus {
 }
 
 @keyframes cp-flow {
-  from { background-position: 120% 0; }
-  to   { background-position: -120% 0; }
+  from { transform: translate3d(-50%, 0, 0); }
+  to   { transform: translate3d(0, 0, 0); }
 }
 
 /* quick switcher (Ctrl+K) */
@@ -1228,7 +1397,9 @@ li[class*="messageListItem"]::before {
   background: var(--cp-gradient-v);
   box-shadow: 0 0 10px var(--cp-neon-glow);
   opacity: 0;
-  transition: opacity 0.16s ease;
+  /* ANIM: linia „wystrzeliwuje" od środka (scaleY) zamiast samego fade */
+  transform: scaleY(0);
+  transition: opacity 0.16s ease, transform 0.22s var(--cp-ease-snap);
   pointer-events: none;
 }
 
@@ -1236,6 +1407,27 @@ li[id^="chat-messages-"]:hover::before,
 [data-list-id="chat-messages"] > li:hover::before,
 li[class*="messageListItem"]:hover::before {
   opacity: 1;
+  transform: scaleY(1);
+}
+
+/* ANIM: nowa (ostatnia) wiadomość wjeżdża z lewej, a jej linia raz mignie.
+   :last-of-type łapie tylko świeżo dodany <li> — doczytana historia u góry
+   listy nie animuje się. */
+li[id^="chat-messages-"]:last-of-type,
+[data-list-id="chat-messages"] > li:last-of-type {
+  animation: cp-slide-in 0.32s var(--cp-ease-snap) backwards;
+}
+
+li[id^="chat-messages-"]:last-of-type::before,
+[data-list-id="chat-messages"] > li:last-of-type::before {
+  animation: cp-msg-line 0.9s steps(1, end);
+}
+
+@keyframes cp-msg-line {
+  0%   { opacity: 1; transform: scaleY(1); }
+  20%  { opacity: 0.3; transform: scaleY(1); }
+  35%  { opacity: 1; transform: scaleY(1); }
+  100% { opacity: 1; transform: scaleY(1); }
 }
 
 /* wiadomości wspominające mnie / odpowiedzi — linia w kolorze alertu */
@@ -1246,6 +1438,7 @@ li[id^="chat-messages-"]:has([class*="replying"])::before,
   background: var(--cp-alert);
   box-shadow: 0 0 10px var(--cp-alert-glow);
   opacity: 0.9;
+  transform: none; /* ANIM: linia wzmianki zawsze w pełnej wysokości */
 }
 
 [class*="mentioned"] {
@@ -1414,6 +1607,13 @@ svg[class*="avatar"] {
   filter: drop-shadow(-1.5px 0 0 var(--cp-neon)) drop-shadow(1.5px 0 0 var(--cp-neon-2));
 }
 
+/* ANIM: jednorazowe szarpnięcie glitch przy najechaniu (awatar w czacie,
+   liście członków i panelu — wszystkie łapie ta jedna reguła) */
+[class*="avatarWrapper"]:hover,
+li[id^="chat-messages-"] img[class*="avatar"]:hover {
+  animation: cp-avatar-glitch 0.45s steps(1, end);
+}
+
 img[class*="avatar"]:hover,
 [class*="avatarWrapper"]:hover img[class*="avatar"] {
   box-shadow: inset 3px 0 0 var(--cp-neon), inset -3px 0 0 var(--cp-neon-2);
@@ -1426,6 +1626,22 @@ img[class*="avatar"]:hover,
   font-family: var(--cp-font-mono);
   font-size: 12px;
   letter-spacing: 0.04em;
+}
+
+/* ANIM: kropki „pisze…" jako migające diody HUD (twarde kroki zamiast płynnego skakania).
+   :not(#cp) podbija specyficzność ponad klasową regułę Discorda bez !important. */
+[class*="typing"] svg circle:not(#cp) {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cp-typing 1.2s steps(1, end) infinite;
+}
+
+[class*="typing"] svg circle:nth-of-type(2):not(#cp) {
+  animation-delay: 0.2s;
+}
+
+[class*="typing"] svg circle:nth-of-type(3):not(#cp) {
+  animation-delay: 0.4s;
 }
 
 /* podświetlenie wiadomości (reply / jump) */
@@ -1527,6 +1743,19 @@ img[class*="avatar"]:hover,
   box-shadow: 2px 2px 12px -2px var(--cp-neon-glow);
 }
 
+/* ANIM: klamry HUD oddychają naprzemiennie (celownik) */
+[class*="membersWrap"]::before,
+[class*="members_"]::before,
+[class*="container"]:has(> [class*="members_"])::before {
+  animation: cp-neon-pulse var(--cp-pulse) ease-in-out infinite;
+}
+
+[class*="membersWrap"]::after,
+[class*="members_"]::after,
+[class*="container"]:has(> [class*="members_"])::after {
+  animation: cp-neon-pulse var(--cp-pulse) ease-in-out calc(var(--cp-pulse) / -2) infinite;
+}
+
 /* nagłówki grup: // ONLINE — 4 */
 [class*="membersGroup"],
 [role="group"] > [class*="membersGroup"] {
@@ -1573,6 +1802,13 @@ svg[class*="status"],
 [class*="avatarWrapper"] svg[class*="status"],
 [class*="mask_"] [class*="status"] svg {
   clip-path: var(--cp-shape-diamond) !important;
+}
+
+/* ANIM: dioda online mruga podwójnie co --cp-pulse. Discord rysuje status jako
+   <rect mask="url(#svg-mask-status-online…)"> — atrybut zostaje nawet po zdjęciu
+   maski CSS, więc to stabilny hak. steps() = repaint tylko przy mrugnięciu. */
+rect[mask*="status-online"] {
+  animation: cp-status-pulse var(--cp-pulse) steps(1, end) infinite;
 }
 
 /* zdejmij maski SVG wewnątrz statusu, żeby romb był jednolity */
@@ -1643,6 +1879,7 @@ svg[class*="status"][mask] {
   box-shadow: 0 0 14px var(--cp-neon-glow), 0 0 14px var(--cp-alert-glow);
   pointer-events: none;
   z-index: 2;
+  animation: cp-neon-pulse calc(var(--cp-pulse) * 1.5) ease-in-out infinite; /* ANIM: „buczenie" zasilania */
 }
 
 /* awatar w panelu — ścięty róg */
@@ -1683,6 +1920,94 @@ svg[class*="status"][mask] {
   background: var(--cp-neon-faint) !important;
   color: var(--cp-neon) !important;
   box-shadow: inset 0 0 16px -8px var(--cp-neon-soft);
+}
+
+/* =============================================================================
+   18b. WŁASNE IKONY (icons/*.svg) — panel użytkownika, panel głosowy, pasek rozmowy
+   -----------------------------------------------------------------------------
+   Natywne <svg> zostaje w DOM (rozmiar, pozycja, klik bez zmian) — chowamy tylko
+   jego ścieżki, a ikonę maluje maska CSS wypełniona currentColor, więc kolory
+   stanów (szary / neon na hover / czerwień przy wyciszeniu) idą za motywem.
+   Przyciski rozpoznawane po aria-label (EN + PL, bez rozróżniania wielkości liter).
+   ponytail: aria-label zależy od języka klienta — inny język = zostaje ikona Discorda;
+   dopisz frazę do listy, jeśli Discord zmieni etykietę.
+   Źródła ikon: icons/*.svg (przy zmianie pliku wygeneruj data URI ponownie).
+   ============================================================================= */
+:root {
+  --cp-icon-settings: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='square' stroke-linejoin='miter'><path d='M18.92 10.02L21.88 10.44L21.88 13.56L18.92 13.98L18.30 15.49L20.09 17.88L17.88 20.09L15.49 18.30L13.98 18.92L13.56 21.88L10.44 21.88L10.02 18.92L8.51 18.30L6.12 20.09L3.91 17.88L5.70 15.49L5.08 13.98L2.12 13.56L2.12 10.44L5.08 10.02L5.70 8.51L3.91 6.12L6.12 3.91L8.51 5.70L10.02 5.08L10.44 2.12L13.56 2.12L13.98 5.08L15.49 5.70L17.88 3.91L20.09 6.12L18.30 8.51Z'/><path d='M11 8.5h2l2.5 2.5v2L13 15.5h-2L8.5 13v-2Z'/></svg>");
+  --cp-icon-mic: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='square' stroke-linejoin='miter'><path d='M10.5 2h3L15 3.5v8L13.5 13h-3L9 11.5v-8Z'/><path d='M5 10v1.5L8.5 16h7l3.5-4.5V10'/><path d='M12 16v5M8 21h8'/></svg>");
+  --cp-icon-mic-muted: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='square' stroke-linejoin='miter'><mask id='cp-mic-cut' maskUnits='userSpaceOnUse' x='0' y='0' width='24' height='24'><rect width='24' height='24' fill='white' stroke='none'/><path d='M3 3l18 18' stroke='black' stroke-width='5'/></mask><g mask='url(%23cp-mic-cut)'><path d='M10.5 2h3L15 3.5v8L13.5 13h-3L9 11.5v-8Z'/><path d='M5 10v1.5L8.5 16h7l3.5-4.5V10'/><path d='M12 16v5M8 21h8'/></g><path d='M3 3l18 18'/></svg>");
+  --cp-icon-headphones: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='square' stroke-linejoin='miter'><path d='M4 15v-4l4-6h8l4 6v4'/><path d='M4 14h4v7H5.5L4 19.5Z'/><path d='M20 14h-4v7h2.5l1.5-1.5Z'/></svg>");
+  --cp-icon-headphones-deafened: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='square' stroke-linejoin='miter'><mask id='cp-head-cut' maskUnits='userSpaceOnUse' x='0' y='0' width='24' height='24'><rect width='24' height='24' fill='white' stroke='none'/><path d='M3 3l18 18' stroke='black' stroke-width='5'/></mask><g mask='url(%23cp-head-cut)'><path d='M4 15v-4l4-6h8l4 6v4'/><path d='M4 14h4v7H5.5L4 19.5Z'/><path d='M20 14h-4v7h2.5l1.5-1.5Z'/></g><path d='M3 3l18 18'/></svg>");
+  --cp-icon-camera: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='square' stroke-linejoin='miter'><path d='M4.5 6H14l1.5 1.5v9L14 18H3V7.5Z'/><path d='M15.5 10.5L21 7v10l-5.5-3.5'/></svg>");
+  --cp-icon-screen-share: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='square' stroke-linejoin='miter'><path d='M2 4h18.5L22 5.5V16H3.5L2 14.5Z'/><path d='M12 16v4M8 20h8'/><path d='M12 13V7.5M9 10l3-3 3 3'/></svg>");
+  --cp-icon-hang-up: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='square' stroke-linejoin='miter'><path d='M2 16.5V12l4-5h12l4 5v4.5L19.5 18 15 16.5v-3.5H9v3.5L4.5 18Z'/></svg>");
+}
+
+:is([class*="panels"], [class*="callContainer"]) :is(button, [role="button"], [role="switch"]):is([aria-label*="mute" i], [aria-label*="wycisz" i]):not([aria-label*="option" i]):not([aria-label*="opcj" i]) {
+  --cp-i: var(--cp-icon-mic);
+}
+
+:is([class*="panels"], [class*="callContainer"]) :is(button, [role="button"], [role="switch"]):is([aria-label*="mute" i], [aria-label*="wycisz" i]):not([aria-label*="option" i]):not([aria-label*="opcj" i])[aria-checked="true"] {
+  --cp-i: var(--cp-icon-mic-muted);
+}
+
+:is([class*="panels"], [class*="callContainer"]) :is(button, [role="button"], [role="switch"]):is([aria-label*="deafen" i], [aria-label*="dźwięk" i]):not([aria-label*="option" i]):not([aria-label*="opcj" i]):not([aria-label*="soundboard" i]) {
+  --cp-i: var(--cp-icon-headphones);
+}
+
+:is([class*="panels"], [class*="callContainer"]) :is(button, [role="button"], [role="switch"]):is([aria-label*="deafen" i], [aria-label*="dźwięk" i]):not([aria-label*="option" i]):not([aria-label*="opcj" i]):not([aria-label*="soundboard" i])[aria-checked="true"] {
+  --cp-i: var(--cp-icon-headphones-deafened);
+}
+
+:is([class*="panels"], [class*="callContainer"]) :is(button, [role="button"], [role="switch"]):is([aria-label*="user settings" i], [aria-label*="ustawienia użytkownika" i]) {
+  --cp-i: var(--cp-icon-settings);
+}
+
+:is([class*="panels"], [class*="callContainer"]) :is(button, [role="button"], [role="switch"]):is([aria-label*="camera" i], [aria-label*="kamer" i], [aria-label*="video" i], [aria-label*="wideo" i]):not([aria-label*="option" i]):not([aria-label*="opcj" i]) {
+  --cp-i: var(--cp-icon-camera);
+}
+
+:is([class*="panels"], [class*="callContainer"]) :is(button, [role="button"], [role="switch"]):is([aria-label*="screen" i], [aria-label*="ekran" i]):not([aria-label*="option" i]):not([aria-label*="opcj" i]):not([aria-label*="full" i]):not([aria-label*="pełn" i]) {
+  --cp-i: var(--cp-icon-screen-share);
+}
+
+:is([class*="panels"], [class*="callContainer"]) :is(button, [role="button"], [role="switch"]):is([aria-label*="disconnect" i], [aria-label*="rozłącz" i], [aria-label*="leave call" i], [aria-label*="opuść" i]) {
+  --cp-i: var(--cp-icon-hang-up);
+}
+
+/* malowanie: tylko svg w przyciskach, które dostały --cp-i powyżej */
+:is([class*="panels"], [class*="callContainer"]) :is(button, [role="button"], [role="switch"]):is(
+  [aria-label*="mute" i], [aria-label*="wycisz" i],
+  [aria-label*="deafen" i], [aria-label*="dźwięk" i],
+  [aria-label*="user settings" i], [aria-label*="ustawienia użytkownika" i],
+  [aria-label*="camera" i], [aria-label*="kamer" i], [aria-label*="video" i], [aria-label*="wideo" i],
+  [aria-label*="screen" i], [aria-label*="ekran" i],
+  [aria-label*="disconnect" i], [aria-label*="rozłącz" i], [aria-label*="leave call" i], [aria-label*="opuść" i]
+):not([aria-label*="option" i]):not([aria-label*="opcj" i]):not([aria-label*="soundboard" i]):not([aria-label*="full" i]):not([aria-label*="pełn" i]) svg {
+  background-color: currentColor;
+  -webkit-mask: var(--cp-i) center / contain no-repeat;
+  mask: var(--cp-i) center / contain no-repeat;
+}
+
+:is([class*="panels"], [class*="callContainer"]) :is(button, [role="button"], [role="switch"]):is(
+  [aria-label*="mute" i], [aria-label*="wycisz" i],
+  [aria-label*="deafen" i], [aria-label*="dźwięk" i],
+  [aria-label*="user settings" i], [aria-label*="ustawienia użytkownika" i],
+  [aria-label*="camera" i], [aria-label*="kamer" i], [aria-label*="video" i], [aria-label*="wideo" i],
+  [aria-label*="screen" i], [aria-label*="ekran" i],
+  [aria-label*="disconnect" i], [aria-label*="rozłącz" i], [aria-label*="leave call" i], [aria-label*="opuść" i]
+):not([aria-label*="option" i]):not([aria-label*="opcj" i]):not([aria-label*="soundboard" i]):not([aria-label*="full" i]):not([aria-label*="pełn" i]) svg > * {
+  visibility: hidden;
+}
+
+/* stany: wyciszony = czerwień alertu, hover = neonowa poświata */
+:is([class*="panels"], [class*="callContainer"]) :is(button, [role="button"], [role="switch"]):is([aria-label*="mute" i], [aria-label*="wycisz" i], [aria-label*="deafen" i], [aria-label*="dźwięk" i]):not([aria-label*="option" i]):not([aria-label*="opcj" i]):not([aria-label*="soundboard" i])[aria-checked="true"] svg {
+  color: var(--cp-alert);
+}
+
+:is([class*="panels"], [class*="callContainer"]) :is(button, [role="button"], [role="switch"]):hover svg {
+  filter: drop-shadow(0 0 4px var(--cp-neon-glow));
 }
 
 /* =============================================================================
@@ -1812,7 +2137,13 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 0 0 12px var(--cp-neon-glow);
 }
 
-input[type="range"]:active::-webkit-slider-thumb,
+/* FIX: rozdzielone — w Chromium nieznany ::-moz-range-thumb unieważniał całą
+   listę selektorów, więc drag = czerwień nigdy nie działał w Discordzie. */
+input[type="range"]:active::-webkit-slider-thumb {
+  background: var(--cp-alert);
+  box-shadow: 0 0 18px var(--cp-alert-glow);
+}
+
 input[type="range"]:active::-moz-range-thumb {
   background: var(--cp-alert);
   box-shadow: 0 0 18px var(--cp-alert-glow);
@@ -1824,7 +2155,9 @@ input[type="range"]:active::-moz-range-thumb {
    ciemny panel z cyjanową obwódką. Knob nigdy nie dostaje transformu
    (Discord sam przesuwa go na drugą stronę).
    ============================================================================= */
-[class*="switch"],
+/* FIX: :not([class*="quickswitcher"]) — „quickswitcher" zawiera „switch", więc
+   te reguły nadpisywały wygląd okna Ctrl+K z sekcji 14. */
+[class*="switch"]:not([class*="quickswitcher"]),
 [role="switch"],
 [class*="checkbox"][role="switch"] {
   clip-path: var(--cp-shape-xs) !important;
@@ -1864,19 +2197,32 @@ input[type="range"]:active::-moz-range-thumb {
   box-shadow: 0 0 12px var(--cp-neon-glow);
 }
 
-[class*="switch"]:hover {
+/* ANIM: włączenie przełącznika = zapłon neonu. Animowany jest KONTENER, nie
+   input[role="switch"] — ten ma natywnie opacity: 0 i animacja by go odsłoniła. */
+div:has(> input[role="switch"]:checked):not([class*="disabled"]),
+div[class*="switch"][class*="checked"]:not([class*="disabled"]) {
+  animation: cp-ignite 0.4s steps(1, end);
+}
+
+[class*="switch"]:not([class*="quickswitcher"]):hover {
   border-color: var(--cp-neon-line-2) !important;
 }
 
-[class*="switch"]:active {
+[class*="switch"]:not([class*="quickswitcher"]):active {
   border-color: var(--cp-alert) !important;
 }
 
-/* Vencord/Discord checkboxy i radia */
+/* Vencord/Discord checkboxy i radia
+   FIX: [role="checkbox"]/[role="radio"] wykluczone dla [data-list-item-id] —
+   nowy UI Discorda (mana, np. modal "Nowa wiadomość") nadaje ten role całemu
+   wierszowi listy (avatar + nick + tag), nie samemu kwadracikowi. Bez wykluczenia
+   cały wiersz dostawał width/height: 16px i clip-path, więc znikał tekst i zostawał
+   tylko ucięty kwadracik. Prawdziwe checkboxy/radia (np. w ustawieniach) nie mają
+   tego atrybutu. */
 input[type="checkbox"]:not([class*="switch"]),
 input[type="radio"],
-[role="checkbox"],
-[role="radio"] {
+[role="checkbox"]:not([data-list-item-id]),
+[role="radio"]:not([data-list-item-id]) {
   -webkit-appearance: none;
   appearance: none;
   width: 16px;
@@ -1890,25 +2236,64 @@ input[type="radio"],
 
 input[type="checkbox"]:not([class*="switch"]):hover,
 input[type="radio"]:hover,
-[role="checkbox"]:hover,
-[role="radio"]:hover {
+[role="checkbox"]:not([data-list-item-id]):hover,
+[role="radio"]:not([data-list-item-id]):hover {
   border-color: var(--cp-neon);
   box-shadow: 0 0 10px -2px var(--cp-neon-glow);
 }
 
 input[type="checkbox"]:not([class*="switch"]):checked,
 input[type="radio"]:checked,
-[role="checkbox"][aria-checked="true"],
-[role="radio"][aria-checked="true"] {
+[role="checkbox"]:not([data-list-item-id])[aria-checked="true"],
+[role="radio"]:not([data-list-item-id])[aria-checked="true"] {
   background: var(--cp-neon);
   border-color: var(--cp-neon);
   box-shadow: 0 0 12px -2px var(--cp-neon-glow);
 }
 
 input[type="radio"]:checked,
-[role="radio"][aria-checked="true"] {
+[role="radio"]:not([data-list-item-id])[aria-checked="true"] {
   clip-path: var(--cp-shape-diamond);
   background: var(--cp-neon);
+}
+
+/* wiersz wyboru znajomego (modal "Nowa wiadomość" / dodaj do grupy) —
+   te same wzorce co member_ w liście członków (hover) i embedFull (lewa krawędź) */
+[class*="friendWrapper_"]:hover [class*="friend_"] {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--cp-neon) 12%, transparent),
+    transparent 85%
+  ) !important;
+  box-shadow: inset 0 0 18px -10px var(--cp-neon-soft);
+}
+
+[class*="friendSelected_"] {
+  border-left: 2px solid var(--cp-neon) !important;
+  background: color-mix(in srgb, var(--cp-neon) 7%, transparent) !important;
+}
+
+[class*="discordTag_"] {
+  font-family: var(--cp-font-mono);
+  letter-spacing: 0.02em;
+}
+
+/* checkbox tego wiersza: ten sam ucięty kwadracik co reszta motywu,
+   przemalowany na kolor zamiast opacity, żeby nie zepsuć przełączania Discorda */
+[class*="checkboxIndicator_"] {
+  clip-path: var(--cp-shape-xs);
+  border: 1px solid var(--cp-neon-line-2);
+  background: var(--cp-bg-input);
+}
+
+[class*="friendSelected_"] [class*="checkboxIndicator_"] {
+  background: var(--cp-neon);
+  border-color: var(--cp-neon);
+  box-shadow: 0 0 10px -2px var(--cp-neon-glow);
+}
+
+[class*="friendSelected_"] [class*="checkStroke_"] {
+  color: var(--cp-on-neon);
 }
 
 /* fokus klawiatury — zawsze neonowy pierścień */
@@ -1949,6 +2334,18 @@ button[class*="button"],
 [class*="lookFilled"][class*="colorPrimary"]:hover {
   background: color-mix(in srgb, var(--cp-neon) 82%, white) !important;
   box-shadow: 0 0 22px -2px var(--cp-neon-glow);
+}
+
+/* ANIM: zapłon świetlówki przy najechaniu na przyciski akcji (brand / danger / outline) */
+:is(
+  [class*="lookFilled"][class*="colorBrand"],
+  [class*="lookFilled"][class*="colorGreen"],
+  [class*="lookFilled"][class*="colorPrimary"],
+  [class*="lookFilled"][class*="colorRed"],
+  [class*="lookFilled"][class*="colorDanger"],
+  [class*="lookOutlined"]
+):not(:disabled):not([aria-disabled="true"]):hover {
+  animation: cp-ignite 0.38s steps(1, end);
 }
 
 [class*="lookFilled"][class*="colorBrand"]:active,
@@ -2062,6 +2459,14 @@ select:focus,
   clip-path: var(--cp-shape) !important;
 }
 
+/* ANIM: zawartość menu wysuwa się z mignięciem. Animujemy scroller w środku,
+   bo samo menu/popout pozycjonuje i animuje JS Discorda (inline transform/opacity —
+   animacja CSS by go nadpisała). */
+[role="menu"] > [class*="scroller"],
+[class*="menu_"] > [class*="scroller"] {
+  animation: cp-slide-in 0.22s var(--cp-ease-snap) backwards;
+}
+
 [role="menuitem"],
 [class*="menu_"] [role="menuitem"],
 [class*="menu"] [class*="item"]:not([class*="itemIcon"]) {
@@ -2104,6 +2509,12 @@ select:focus,
   box-shadow: var(--cp-shadow), 0 0 44px -18px var(--cp-neon-glow) !important;
 }
 
+/* ANIM: treść modalu „bootuje" (tylko opacity — skalę/wejście okna robi Discord).
+   Przyciski pominięte, bo część z nich ma własne opacity (np. X pokazywany na hover). */
+[role="dialog"] > :not(button):not([role="button"]) {
+  animation: cp-boot 0.3s steps(1, end) backwards;
+}
+
 /* tooltipy */
 /* FIX: ramka tylko na samym dymku. [class*="tooltip"] łapał też jego dzieci
    i warstwę: div.tooltipContent_* (wewnętrzna, druga ramka wokół tekstu),
@@ -2132,6 +2543,7 @@ select:focus,
   font-size: 12px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  animation: cp-boot 0.18s steps(1, end) backwards; /* ANIM: tekst mignie jak terminal */
 }
 
 /* FIX: strzałka nowego tooltipa (svg w caret_*) w kolorach dymku zamiast
@@ -2297,6 +2709,14 @@ select:focus,
   font-size: 12px;
 }
 
+/* ANIM: powiadomienia — pasek Discorda i toasty Vencorda wysuwają się z mignięciem.
+   Toastów Discorda ([class*="toast"]) nie ruszamy: animuje je JS inline. */
+[class*="notice_"],
+[class*="noticeBar"],
+.vc-notification-root {
+  animation: cp-slide-in 0.35s var(--cp-ease-snap) backwards;
+}
+
 [class*="notice"] [class*="close"],
 [class*="notice"] [class*="button"] {
   color: var(--cp-neon) !important;
@@ -2359,37 +2779,76 @@ select:focus,
   stroke: var(--cp-neon) !important;
 }
 
+/* ANIM: loadery Discorda przechodzą na cyfrowy „tik" — zostają ich własne keyframes
+   i czasy, podmieniamy tylko krzywą na steps() (obracające się kółko skacze
+   co 30°, kostki/kropki poruszają się skokowo) + neonowa poświata.
+   :not(#cp) podbija specyficzność ponad klasową regułę Discorda bez !important. */
+[class*="spinner"] svg[class*="circular"]:not(#cp),
+[class*="spinningCircle"] svg:not(#cp) {
+  animation-timing-function: steps(12, end);
+  filter: drop-shadow(0 0 6px var(--cp-neon-glow));
+}
+
+[class*="spinner"] [class*="item"]:not(#cp) {
+  animation-timing-function: steps(6, end);
+  box-shadow: 0 0 10px var(--cp-neon-glow);
+}
+
 /* =============================================================================
-   25. prefers-reduced-motion
-   Wyłącza wszystkie animacje motywu. Poświata i statyczny RGB-split zostają
-   (to już nie ruch) — jeśli chcesz też je usunąć, zakomentuj reguły niżej.
+
+/* =============================================================================
+   25. prefers-reduced-motion + „Ogranicz ruch" w ustawieniach Discorda
+   -----------------------------------------------------------------------------
+   Każda animacja/przejście kończy się natychmiast (0.01ms, 1 iteracja) zamiast
+   `animation: none` — dzięki temu elementy z fill-mode: backwards lądują od razu
+   w stanie końcowym, a zdarzenia transitionend/animationend nadal się odpalają
+   (JS Discorda na nie czeka). Obejmuje też animacje samego Discorda — to celowe,
+   użytkownik poprosił o mniej ruchu. Poświata i statyczny RGB-split zostają.
+   Klasa html.reduce-motion to przełącznik Discorda (Ustawienia → Dostępność).
    ============================================================================= */
 @media (prefers-reduced-motion: reduce) {
-  #app-mount::before,
-  #app-mount::after,
-  [class*="searchBar"]::after,
-  [class*="searchBarComponent"]::after,
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+}
+
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0s !important;
+}
+
+/* statyczna wersja glitcha — bez ruchu, tylko rozjazd RGB (wszystkie elementy z sekcji 10) */
+@media (prefers-reduced-motion: reduce) {
   [class*="upperContainer"] h1,
   [class*="upperContainer"] [class*="title"],
   [class*="sidebar_"] [class*="header_"] [class*="name"],
+  [class*="sidebar_"] [class*="guildName"],
   [class*="sidebar_"] [class*="modeSelected"] [class*="name"],
-  [class*="panels"]::before {
-    animation: none !important;
-    transition: none !important;
+  [class*="sidebar_"] [class*="containerDefault"] [class*="selected"] [class*="name"],
+  [class*="name_"]:is([class*="selected"]) {
+    text-shadow: -1px 0 var(--cp-neon), 1px 0 var(--cp-neon-2);
   }
+}
 
-  /* statyczna wersja glitcha — bez ruchu, tylko rozjazd RGB */
+html.reduce-motion :is(
   [class*="upperContainer"] h1,
   [class*="upperContainer"] [class*="title"],
-  [class*="sidebar_"] [class*="modeSelected"] [class*="name"] {
-    text-shadow: -1px 0 var(--cp-neon), 1px 0 var(--cp-neon-2);
-    transform: none !important;
-  }
-
-  /* płynący gradient na górnej krawędzi search bara też stoi */
-  [class*="searchBar"]::after,
-  [class*="searchBarComponent"]::after {
-    opacity: 0.5;
-    background-position: 50% 0;
-  }
+  [class*="sidebar_"] [class*="header_"] [class*="name"],
+  [class*="sidebar_"] [class*="guildName"],
+  [class*="sidebar_"] [class*="modeSelected"] [class*="name"],
+  [class*="sidebar_"] [class*="containerDefault"] [class*="selected"] [class*="name"],
+  [class*="name_"]:is([class*="selected"])
+) {
+  text-shadow: -1px 0 var(--cp-neon), 1px 0 var(--cp-neon-2);
 }
